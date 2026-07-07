@@ -1,58 +1,69 @@
 import { useState } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { loadSave, type SlotId } from '../store/saveSystem'
+import { loadSave, formatLastPlayed, type SlotId } from '../store/saveSystem'
 import { GRADES } from '../data/grades'
+import { AVATARS } from '../data/avatars'
+import { UI } from '../data/uiText'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 function SlotCard({ slot }: { slot: SlotId }) {
   const selectSlot = useGameStore((s) => s.selectSlot)
   const startNewOnSlot = useGameStore((s) => s.startNewOnSlot)
-  const deleteSlot = useGameStore((s) => s.deleteSlot)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [, forceUpdate] = useState(0)
+  const [confirming, setConfirming] = useState(false)
   const data = loadSave(slot)
 
   return (
     <div className="slot-card">
-      <div className="slot-title">セーブ {slot}</div>
+      <div className="slot-title">
+        {UI.title.saveSlot} {slot}
+      </div>
       {data ? (
         <>
           <div className="slot-info">
-            <span className="slot-name">{data.name}</span>
-            <span className="slot-detail">
-              {GRADES[data.grade].label} ／ レベル{data.level} ／ 🪙{data.coins}
+            <span
+              className="hud-avatar"
+              style={{ background: AVATARS[data.avatar % AVATARS.length].color }}
+            >
+              🙂
             </span>
-          </div>
-          <button className="btn btn-primary btn-big" onClick={() => selectSlot(slot)}>
-            つづきから ▶
-          </button>
-          {confirmDelete ? (
-            <div className="slot-delete-confirm">
-              <span>ほんとうに けす？</span>
-              <button
-                className="btn btn-danger btn-small"
-                onClick={() => {
-                  deleteSlot(slot)
-                  setConfirmDelete(false)
-                  forceUpdate((n) => n + 1)
-                }}
-              >
-                けす
-              </button>
-              <button className="btn btn-ghost btn-small" onClick={() => setConfirmDelete(false)}>
-                やめる
-              </button>
+            <div className="slot-info-text">
+              <span className="slot-name">{data.name}</span>
+              <span className="slot-detail">
+                {GRADES[data.grade].label} ／ レベル{data.level} ／ 🪙{data.coins}
+              </span>
+              <span className="slot-date">
+                {UI.title.lastPlayed}
+                {formatLastPlayed(data.lastPlayed)}
+              </span>
             </div>
-          ) : (
-            <button className="btn btn-ghost btn-small" onClick={() => setConfirmDelete(true)}>
-              さいしょから やりなおす
-            </button>
+          </div>
+          <button className="btn btn-primary btn-big btn-wide" onClick={() => selectSlot(slot)}>
+            {UI.title.continueGame}
+          </button>
+          <button className="btn btn-ghost" onClick={() => setConfirming(true)}>
+            {UI.title.newGame}
+          </button>
+          {confirming && (
+            <ConfirmDialog
+              message={UI.title.confirmReset}
+              yesLabel={UI.title.confirmYes}
+              noLabel={UI.title.confirmNo}
+              onYes={() => {
+                setConfirming(false)
+                startNewOnSlot(slot)
+              }}
+              onNo={() => setConfirming(false)}
+            />
           )}
         </>
       ) : (
         <>
-          <div className="slot-info slot-empty">— データなし —</div>
-          <button className="btn btn-secondary btn-big" onClick={() => startNewOnSlot(slot)}>
-            あたらしく はじめる ✨
+          <div className="slot-info slot-empty">{UI.title.emptySlot}</div>
+          <button
+            className="btn btn-secondary btn-big btn-wide"
+            onClick={() => startNewOnSlot(slot)}
+          >
+            {UI.title.newGame}
           </button>
         </>
       )}
@@ -61,18 +72,22 @@ function SlotCard({ slot }: { slot: SlotId }) {
 }
 
 export function TitleScreen() {
+  const openSettings = useGameStore((s) => s.openSettings)
   return (
     <div className="screen title-screen">
       <div className="title-logo">
         <span className="title-block">🟩</span>
-        <h1>まなびクラフトワールド</h1>
-        <p className="title-sub">たんけんして あそんで まなぼう！</p>
+        <h1>{UI.title.gameName}</h1>
+        <p className="title-sub">{UI.title.subtitle}</p>
       </div>
       <div className="slot-row">
         <SlotCard slot={1} />
         <SlotCard slot={2} />
       </div>
-      <p className="title-note">セーブデータは この たんまつの なかに ほぞんされるよ</p>
+      <button className="btn btn-ghost" onClick={openSettings}>
+        {UI.title.settings}
+      </button>
+      <p className="title-note">{UI.title.saveNote}</p>
     </div>
   )
 }

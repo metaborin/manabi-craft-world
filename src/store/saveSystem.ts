@@ -28,10 +28,12 @@ export function createNewSave(name: string, avatar: number): SaveData {
     pet: null,
     buildGrid: Array(BUILD_GRID_SIZE * BUILD_GRID_SIZE).fill(null),
     stats: { answered: 0, correct: 0, blocksPlaced: 0, bySubject: {} },
-    lastPlayed: todayString(),
+    lastPlayed: new Date().toISOString(),
     dailyCount: 0,
     dailyDate: todayString(),
     chestDate: '',
+    tutorialStep: 0,
+    tutorialDone: false,
   }
 }
 
@@ -47,6 +49,12 @@ export function loadSave(slot: SlotId): SaveData | null {
       data.dailyDate = todayString()
       data.dailyCount = 0
     }
+    // フェーズ1のセーブにはチュートリアル項目がないので補完する
+    // （すでに問題に答えたことがある子はチュートリアル済みとみなす）
+    if (data.tutorialDone === undefined) {
+      data.tutorialDone = data.stats.answered > 0
+      data.tutorialStep = data.tutorialDone ? 6 : 0
+    }
     return data
   } catch {
     return null
@@ -56,11 +64,19 @@ export function loadSave(slot: SlotId): SaveData | null {
 /** スロットにセーブする */
 export function writeSave(slot: SlotId, data: SaveData): void {
   try {
-    data.lastPlayed = todayString()
+    data.lastPlayed = new Date().toISOString()
     localStorage.setItem(KEY_PREFIX + slot, JSON.stringify(data))
   } catch {
     // 保存に失敗しても遊び続けられるようにする（容量不足など）
   }
+}
+
+/** 「さいごにあそんだ日」の表示用（例: 7/7 19:30）。古い形式はそのまま返す */
+export function formatLastPlayed(raw: string): string {
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return raw
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${pad(d.getMinutes())}`
 }
 
 /** スロットのデータを消す */

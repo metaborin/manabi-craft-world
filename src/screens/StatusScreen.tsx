@@ -2,7 +2,7 @@ import { useGameStore } from '../store/gameStore'
 import { GRADES, SUBJECTS } from '../data/grades'
 import { BADGES, PET_MAP, petStage, xpForLevel } from '../data/rewards'
 import { getQuestions } from '../data/questions'
-import { AVATARS } from '../game/WorldCanvas'
+import { AVATARS } from '../data/avatars'
 
 export function StatusScreen() {
   const save = useGameStore((s) => s.save)
@@ -26,7 +26,7 @@ export function StatusScreen() {
 
       <div className="panel-body">
         {/* プレイヤーカード */}
-        <div className="status-card">
+        <div className="status-card player-card">
           <span
             className="hud-avatar big"
             style={{ background: AVATARS[save.avatar % AVATARS.length].color }}

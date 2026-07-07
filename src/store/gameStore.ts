@@ -4,12 +4,14 @@ import type {
   Question,
   SaveData,
   Screen,
+  Settings,
   Subject,
   WorldNPC,
 } from '../types/game'
 import { getQuestions } from '../data/questions'
 import { SUBJECTS } from '../data/grades'
 import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, xpForLevel } from '../data/rewards'
+import { UI } from '../data/uiText'
 import {
   createNewSave,
   deleteSave,
@@ -18,6 +20,8 @@ import {
   todayString,
   type SlotId,
 } from './saveSystem'
+import { loadSettings, writeSettings } from './settingsSystem'
+import { resetPlayerState } from '../game/playerState'
 
 /** 1クエスト＝3問のセッション */
 export interface QuestSession {
@@ -39,6 +43,8 @@ export interface QuestSession {
   newBadges: string[]
   /** このセッションで正解した数 */
   clearedCount: number
+  /** このセッションでもらったコイン合計（ボーナス込み） */
+  earnedCoins: number
   /** セッション終了ボーナスのメッセージ */
   bonusMessages: string[]
 }
@@ -47,6 +53,9 @@ interface GameState {
   screen: Screen
   slot: SlotId | null
   save: SaveData | null
+  settings: Settings
+  /** せってい画面から戻る先 */
+  settingsReturn: Screen
   /** いま近くにいるNPC（しらべるボタンの対象） */
   nearby: WorldNPC | null
   quest: QuestSession | null
@@ -54,11 +63,14 @@ interface GameState {
   toast: { id: number; text: string } | null
   /** 「はじめから」でスロットを選んだ直後か（名前入力→学年選択に進む用） */
   isNewGame: boolean
+  buildSelection: string | null
 
   setScreen: (s: Screen) => void
+  openSettings: () => void
+  closeSettings: () => void
+  updateSettings: (patch: Partial<Settings>) => void
   selectSlot: (slot: SlotId) => void
   startNewOnSlot: (slot: SlotId) => void
-  deleteSlot: (slot: SlotId) => void
   createSave: (name: string, avatar: number) => void
   setGrade: (g: Grade) => void
   setNearby: (npc: WorldNPC | null) => void
@@ -70,11 +82,12 @@ interface GameState {
   closeQuest: () => void
   placeBlock: (cell: number) => void
   selectBuildBlock: (blockId: string | null) => void
-  buildSelection: string | null
   buyBlock: (blockId: string) => void
   buyPet: (petId: string) => void
   showToast: (text: string) => void
   backToTitle: () => void
+  /** チュートリアルを1つ進める（stepが一致するときだけ） */
+  advanceTutorial: (step: number) => void
 }
 
 let toastId = 0
@@ -127,18 +140,16 @@ function pickQuestions(save: SaveData, subject: Subject): Question[] {
   return [...shuffle(fresh), ...shuffle(done)].slice(0, 3)
 }
 
-const ENCOURAGE_WRONG = [
-  'おしい！ もういちど やってみよう',
-  'だいじょうぶ！ ヒントを みてみよう',
-  'いいちょうせん！ こんどは いっしょに かんがえよう',
-]
-
-const PRAISE = ['よくできたね！🎉', 'すごい！ せいかい！✨', 'その ちょうし！🌟', 'ピンポーン！ だいせいかい！🎊']
+function getBlockPrice(blockId: string): number | null {
+  return BLOCK_MAP[blockId]?.price ?? null
+}
 
 export const useGameStore = create<GameState>((set, get) => ({
   screen: 'title',
   slot: null,
   save: null,
+  settings: loadSettings(),
+  settingsReturn: 'title',
   nearby: null,
   quest: null,
   toast: null,
@@ -147,24 +158,32 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setScreen: (s) => set({ screen: s }),
 
+  openSettings: () => set({ settingsReturn: get().screen, screen: 'settings' }),
+
+  closeSettings: () => set({ screen: get().settingsReturn }),
+
+  updateSettings: (patch) => {
+    const next = { ...get().settings, ...patch }
+    writeSettings(next)
+    set({ settings: next })
+  },
+
   selectSlot: (slot) => {
     const data = loadSave(slot)
     if (data) {
       writeSave(slot, data)
+      resetPlayerState()
       set({ slot, save: data, screen: 'world', isNewGame: false })
     } else {
       set({ slot, save: null, screen: 'name', isNewGame: true })
     }
   },
 
+  /** 「はじめから」：スロットのデータを消して名前入力へ */
   startNewOnSlot: (slot) => {
-    set({ slot, save: null, screen: 'name', isNewGame: true })
-  },
-
-  deleteSlot: (slot) => {
     deleteSave(slot)
-    // 再描画のためにダミー更新
-    set({ toast: { id: ++toastId, text: 'データを けしました' } })
+    resetPlayerState()
+    set({ slot, save: null, screen: 'name', isNewGame: true })
   },
 
   createSave: (name, avatar) => {
@@ -183,12 +202,18 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setNearby: (npc) => {
-    if (get().nearby?.id !== npc?.id) set({ nearby: npc })
+    if (get().nearby?.id !== npc?.id) {
+      set({ nearby: npc })
+      // チュートリアル②：なにかに ちかづいた
+      if (npc) get().advanceTutorial(1)
+    }
   },
 
   interact: () => {
     const { nearby, save, quest } = get()
     if (!nearby || !save || quest) return
+    // チュートリアル③：しらべるを おした
+    get().advanceTutorial(2)
     switch (nearby.kind) {
       case 'quest':
         get().startQuest(nearby.subject!)
@@ -204,13 +229,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         break
       case 'chest': {
         if (save.chestDate === todayString()) {
-          get().showToast('たからばこは あした また あくよ🔒')
+          get().showToast(UI.world.chestClosed)
         } else {
           mutateSave(get, set, (s) => {
             s.chestDate = todayString()
             s.coins += 10
           })
-          get().showToast('たからばこを あけた！ +10コイン🪙')
+          get().showToast(UI.world.chestOpened)
         }
         break
       }
@@ -222,9 +247,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!save) return
     const questions = pickQuestions(save, subject)
     if (questions.length === 0) {
-      get().showToast(
-        `${SUBJECTS[subject].name}の もんだいは ${save.grade}ねんせいでは じゅんびちゅう！ ほかの がくねんで あそんでみてね`,
-      )
+      get().showToast(UI.world.noQuestions(SUBJECTS[subject].name, save.grade))
       return
     }
     set({
@@ -241,6 +264,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         levelUp: false,
         newBadges: [],
         clearedCount: 0,
+        earnedCoins: 0,
         bonusMessages: [],
       },
     })
@@ -260,7 +284,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           wrong,
           hintLevel: Math.min(wrong, 2),
           assist: wrong >= 2,
-          message: ENCOURAGE_WRONG[Math.min(wrong - 1, ENCOURAGE_WRONG.length - 1)],
+          message: UI.quest.encourage[Math.min(wrong - 1, UI.quest.encourage.length - 1)],
         },
       })
       // まちがえても記録は「ちょうせんした」だけ。ペナルティなし
@@ -273,6 +297,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const xp = q.reward.xp
     let levelUp = false
     let newBadges: string[] = []
+    let bonusCoins = 0
     const bonusMessages: string[] = []
     const blockNames: string[] = []
 
@@ -299,24 +324,30 @@ export const useGameStore = create<GameState>((set, get) => ({
       s.dailyCount += 1
       if (s.dailyCount === DAILY_BONUS.small.at) {
         s.coins += DAILY_BONUS.small.coins
+        bonusCoins += DAILY_BONUS.small.coins
         bonusMessages.push(DAILY_BONUS.small.message)
       }
       if (s.dailyCount === DAILY_BONUS.big.at) {
         s.coins += DAILY_BONUS.big.coins
+        bonusCoins += DAILY_BONUS.big.coins
         bonusMessages.push(DAILY_BONUS.big.message)
       }
       newBadges = checkBadges(s)
     })
+
+    // チュートリアル④：はじめて せいかいした
+    get().advanceTutorial(3)
 
     set({
       quest: {
         ...quest,
         phase: 'correct',
         lastReward: { coins, xp, blockNames },
-        message: PRAISE[Math.floor(Math.random() * PRAISE.length)],
+        message: UI.quest.praise[Math.floor(Math.random() * UI.quest.praise.length)],
         levelUp,
         newBadges,
         clearedCount: quest.clearedCount + 1,
+        earnedCoins: quest.earnedCoins + coins + bonusCoins,
         bonusMessages,
       },
     })
@@ -333,6 +364,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!quest) return
     if (quest.index + 1 >= quest.questions.length) {
       set({ quest: { ...quest, phase: 'done' } })
+      // チュートリアル⑤：クエストを さいごまで やった
+      get().advanceTutorial(4)
     } else {
       set({
         quest: {
@@ -373,9 +406,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         s.stats.blocksPlaced += 1
         const earned = checkBadges(s)
         if (earned.length > 0) {
-          setTimeout(() => get().showToast('あたらしい バッジを ゲット！🏅'), 100)
+          // チュートリアル完了トーストと重ならないよう、少し待ってから出す
+          setTimeout(() => get().showToast(UI.toast.newBadge), 2600)
         }
       })
+      // チュートリアル⑥：ブロックを おいた
+      get().advanceTutorial(5)
     }
   },
 
@@ -384,7 +420,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!save) return
     const price = getBlockPrice(blockId)
     if (price === null || save.coins < price) {
-      get().showToast('コインが たりないよ。クエストで ためよう！')
+      get().showToast(UI.shop.noCoins)
       return
     }
     mutateSave(get, set, (s) => {
@@ -392,19 +428,19 @@ export const useGameStore = create<GameState>((set, get) => ({
       s.blocks[blockId] = (s.blocks[blockId] ?? 0) + 1
       checkBadges(s)
     })
-    get().showToast('かった！ けんちくエリアで つかってみよう🧱')
+    get().showToast(UI.shop.bought)
   },
 
   buyPet: (petId) => {
     const { save } = get()
     if (!save) return
     if (save.pet) {
-      get().showToast('もう ペットが いるよ🐾 だいじに そだてよう！')
+      get().showToast(UI.shop.alreadyPet)
       return
     }
     const pet = PET_MAP[petId]
     if (!pet || save.coins < pet.price) {
-      get().showToast('コインが たりないよ。クエストで ためよう！')
+      get().showToast(UI.shop.noCoins)
       return
     }
     mutateSave(get, set, (s) => {
@@ -412,7 +448,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       s.pet = { type: petId, growth: 0 }
       checkBadges(s)
     })
-    get().showToast(`${pet.name}が なかまに なった！${pet.emoji}`)
+    get().showToast(UI.shop.petBought(pet.name, pet.emoji))
   },
 
   showToast: (text) => {
@@ -420,10 +456,22 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   backToTitle: () => {
+    resetPlayerState()
     set({ screen: 'title', slot: null, save: null, quest: null, nearby: null })
   },
-}))
 
-function getBlockPrice(blockId: string): number | null {
-  return BLOCK_MAP[blockId]?.price ?? null
-}
+  advanceTutorial: (step) => {
+    const { save } = get()
+    if (!save || save.tutorialDone || save.tutorialStep !== step) return
+    const nextStep = step + 1
+    const finished = nextStep >= 6
+    mutateSave(get, set, (s) => {
+      s.tutorialStep = nextStep
+      if (finished) {
+        s.tutorialDone = true
+        s.coins += 10
+      }
+    })
+    if (finished) get().showToast(UI.tutorial.done)
+  },
+}))

@@ -1,16 +1,19 @@
 import { useRef } from 'react'
 import { inputState } from '../game/input'
 import { useGameStore } from '../store/gameStore'
+import { UI } from '../data/uiText'
 
 /**
  * タブレット・スマホ用の画面内コントローラー。
- * 左下：移動パッド ／ 右下：ジャンプボタン
- * （「しらべる」ボタンはHUD側で近くにいるときだけ表示）
+ * 左下：移動パッド ／ 右下：「しらべる」「ジャンプ」ボタン
+ * せっていで PC でも表示できる（じどう／ひょうじする／ひょうじしない）。
  */
 export function TouchControls() {
   const padRef = useRef<HTMLDivElement>(null)
   const knobRef = useRef<HTMLDivElement>(null)
   const activeId = useRef<number | null>(null)
+  const nearby = useGameStore((s) => s.nearby)
+  const interact = useGameStore((s) => s.interact)
 
   const updateFromPointer = (clientX: number, clientY: number) => {
     const pad = padRef.current
@@ -28,7 +31,7 @@ export function TouchControls() {
     }
     inputState.touchX = dx
     inputState.touchZ = dy
-    knob.style.transform = `translate(${dx * 34}px, ${dy * 34}px)`
+    knob.style.transform = `translate(${dx * 40}px, ${dy * 40}px)`
   }
 
   const reset = () => {
@@ -40,6 +43,7 @@ export function TouchControls() {
 
   return (
     <>
+      {/* 左下：移動パッド */}
       <div
         ref={padRef}
         className="touch-pad"
@@ -55,38 +59,55 @@ export function TouchControls() {
         onPointerCancel={reset}
       >
         <div className="touch-pad-knob" ref={knobRef} />
-        <span className="touch-pad-label">いどう</span>
+        <span className="touch-pad-label">{UI.world.movePad}</span>
       </div>
-      <button
-        className="touch-jump"
-        onPointerDown={(e) => {
-          e.preventDefault()
-          inputState.jump = true
-        }}
-        onPointerUp={() => {
-          inputState.jump = false
-        }}
-        onPointerCancel={() => {
-          inputState.jump = false
-        }}
-      >
-        ジャンプ
-      </button>
+
+      {/* 右下：しらべる＆ジャンプ */}
+      <div className="touch-buttons">
+        <button
+          className={`touch-action touch-search ${nearby ? 'active' : ''}`}
+          disabled={!nearby}
+          onClick={interact}
+        >
+          🔍
+          <span>{UI.world.searchButton}</span>
+        </button>
+        <button
+          className="touch-action touch-jump"
+          onPointerDown={(e) => {
+            e.preventDefault()
+            inputState.jump = true
+          }}
+          onPointerUp={() => {
+            inputState.jump = false
+          }}
+          onPointerCancel={() => {
+            inputState.jump = false
+          }}
+        >
+          ⤴️
+          <span>{UI.world.jumpButton}</span>
+        </button>
+      </div>
     </>
   )
 }
 
-/** 近くにNPCがいるときに出る「しらべる」ボタン */
+/** PC用：近くにNPCがいるときに出る「しらべる」ボタン */
 export function InteractButton() {
   const nearby = useGameStore((s) => s.nearby)
   const interact = useGameStore((s) => s.interact)
   if (!nearby) return null
   const verb =
-    nearby.kind === 'quest' ? 'はなす' : nearby.kind === 'chest' ? 'あける' : 'しらべる'
+    nearby.kind === 'quest'
+      ? UI.world.interactVerbQuest
+      : nearby.kind === 'chest'
+        ? UI.world.interactVerbChest
+        : UI.world.interactVerbOther
   return (
     <button className="interact-btn" onClick={interact}>
       🔍 {nearby.label}と {verb}
-      <span className="interact-key">Eキー / タップ</span>
+      <span className="interact-key">{UI.world.interactKeyHint}</span>
     </button>
   )
 }

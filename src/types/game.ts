@@ -112,6 +112,22 @@ export interface SaveData {
   dailyDate: string
   /** たからばこを最後に開けた日 */
   chestDate: string
+  /** チュートリアルの進行ステップ（0〜5） */
+  tutorialStep: number
+  /** チュートリアルが終わったか */
+  tutorialDone: boolean
+}
+
+/** 端末ごとの設定（セーブとは別にlocalStorageへ保存） */
+export interface Settings {
+  /** もじのおおきさ */
+  textSize: 'normal' | 'large'
+  /** 画面内ボタン（移動パッドなど）の表示 */
+  touchButtons: 'auto' | 'on' | 'off'
+  /** 効果音（今は設定のみ。音はフェーズ3で追加） */
+  sound: 'on' | 'off'
+  /** ふりがな表示 */
+  furigana: 'on' | 'off'
 }
 
 export type Screen =
@@ -122,6 +138,7 @@ export type Screen =
   | 'status'
   | 'build'
   | 'shop'
+  | 'settings'
 
 /** ワールド内で話しかけられるもの（NPC・看板・宝箱など） */
 export interface WorldNPC {

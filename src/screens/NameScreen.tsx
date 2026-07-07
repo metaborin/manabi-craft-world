@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { AVATARS } from '../game/WorldCanvas'
+import { AVATARS } from '../data/avatars'
 
 const RANDOM_NAMES = ['そらまめ', 'ほしのこ', 'みどりん', 'こはるん', 'ぽんた', 'ひかり', 'らいと', 'つむぎ']
 

@@ -395,20 +395,48 @@ ruby rt {
   font-size: 17px;
   box-shadow: var(--shadow);
 }
-.hud-daily {
+/* 「つぎにすること」ガイド */
+.hud-guide {
   position: absolute;
   top: 66px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
   pointer-events: none;
   max-width: 94vw;
 }
-.daily-rec,
-.daily-progress {
+.guide-banner {
+  background: rgba(255, 255, 255, 0.95);
+  border: 3px solid var(--orange);
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 17px;
+  font-weight: bold;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: pop 0.3s;
+}
+.guide-banner.tutorial {
+  border-color: var(--green);
+  background: #f0fbf1;
+}
+.guide-icon {
+  font-size: 22px;
+}
+.guide-step {
+  background: var(--green);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 13px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.daily-rec {
   background: rgba(255, 255, 255, 0.88);
   border-radius: 999px;
   padding: 6px 14px;
@@ -460,10 +488,10 @@ ruby rt {
 /* タッチ操作 */
 .touch-pad {
   position: absolute;
-  bottom: 24px;
+  bottom: 30px;
   left: 24px;
-  width: 128px;
-  height: 128px;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.35);
   border: 3px solid rgba(255, 255, 255, 0.7);
@@ -473,8 +501,8 @@ ruby rt {
   justify-content: center;
 }
 .touch-pad-knob {
-  width: 54px;
-  height: 54px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: var(--shadow);
@@ -482,24 +510,55 @@ ruby rt {
 }
 .touch-pad-label {
   position: absolute;
-  bottom: -22px;
-  font-size: 12px;
+  bottom: -24px;
+  font-size: 13px;
   color: #fff;
+  font-weight: bold;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
 }
-.touch-jump {
+.touch-buttons {
   position: absolute;
-  bottom: 40px;
+  bottom: 30px;
   right: 24px;
-  width: 88px;
-  height: 88px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  touch-action: none;
+}
+.touch-action {
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  font-size: 15px;
+  background: rgba(255, 255, 255, 0.88);
+  font-size: 26px;
   font-weight: bold;
   color: var(--brown);
   box-shadow: var(--shadow);
   touch-action: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 4px solid transparent;
+}
+.touch-action span {
+  font-size: 14px;
+}
+.touch-action:disabled {
+  opacity: 0.35;
+}
+.touch-search.active {
+  background: var(--orange);
+  color: #fff;
+  border-color: #fff;
+  animation: pulse 1s infinite alternate;
+}
+@keyframes pulse {
+  to {
+    transform: scale(1.08);
+    box-shadow: 0 0 18px rgba(255, 159, 67, 0.8);
+  }
 }
 
 /* トースト */
@@ -759,7 +818,7 @@ ruby rt {
   flex-direction: column;
   gap: 10px;
 }
-.status-card:first-child {
+.status-card.player-card {
   flex-direction: row;
   align-items: center;
   gap: 14px;
@@ -955,16 +1014,257 @@ ruby rt {
   font-size: 40px;
 }
 
+/* ============ フェーズ2追加分 ============ */
+
+/* 横いっぱいボタン */
+.btn-wide {
+  width: 100%;
+}
+
+/* セーブスロット（アバター＋詳細） */
+.slot-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  width: 100%;
+  justify-content: center;
+}
+.slot-info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.slot-date {
+  font-size: 13px;
+  color: #a3937f;
+}
+
+/* 確認ダイアログ */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(74, 55, 40, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 16px;
+}
+.confirm-card {
+  background: var(--cream);
+  border-radius: 22px;
+  padding: 28px;
+  width: min(460px, 94vw);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  animation: pop 0.25s;
+}
+.confirm-message {
+  font-size: 20px;
+  font-weight: bold;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.confirm-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* コインが増えたときにポンとはねる */
+.coin-bump {
+  animation: coin-bump 0.4s;
+}
+@keyframes coin-bump {
+  30% {
+    transform: scale(1.25);
+  }
+}
+
+/* 報酬アイテムが順番にポップイン */
+.reward-item {
+  animation: pop 0.35s backwards;
+}
+.reward-item:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.reward-item:nth-child(3) {
+  animation-delay: 0.25s;
+}
+.reward-item:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.reward-item:nth-child(5) {
+  animation-delay: 0.55s;
+}
+
+/* レベルアップの光る演出 */
+.levelup-banner {
+  animation: pop 0.4s, glow-gold 1.2s infinite alternate;
+}
+@keyframes glow-gold {
+  to {
+    box-shadow: 0 0 22px rgba(255, 213, 79, 0.9);
+  }
+}
+
+/* クエスト完了の紙ふぶき */
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 24px;
+}
+.confetti-piece {
+  position: absolute;
+  top: -30px;
+  font-size: 24px;
+  animation: confetti-fall 2.4s ease-in forwards;
+}
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0.4;
+  }
+}
+
+/* 建築：いま選んでいるブロック */
+.build-selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 10px 22px;
+  box-shadow: var(--shadow);
+  font-size: 17px;
+  flex-shrink: 0;
+}
+/* ブロックを選んでいるとき、置けるマスをわかりやすく */
+.build-grid.placing .build-cell:not(.filled) {
+  background: #fdf7e3;
+  border: 2px dashed #e0c98f;
+}
+.build-grid.placing .build-cell:not(.filled):hover {
+  background: #fff3c4;
+}
+
+/* ショップ：買えない理由 */
+.shop-reason {
+  font-size: 13px;
+  font-weight: bold;
+  color: #e8862f;
+}
+
+/* せってい画面 */
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 2px dashed #efe6d8;
+}
+.setting-row:last-child {
+  border-bottom: none;
+}
+.setting-label {
+  font-weight: bold;
+  font-size: 18px;
+}
+.setting-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.setting-option {
+  background: #f5efe4;
+  color: var(--brown);
+  border: 3px solid transparent;
+  font-size: 17px;
+  min-height: 52px;
+  min-width: 110px;
+}
+.setting-option.selected {
+  background: #fff;
+  border-color: var(--orange);
+  color: var(--orange-dark);
+}
+
+/* もじのおおきさ：おおきい */
+.text-large .btn {
+  font-size: 21px;
+}
+.text-large .btn-big {
+  font-size: 25px;
+}
+.text-large .quest-question {
+  font-size: clamp(24px, 4vw, 31px);
+}
+.text-large .choice-btn {
+  font-size: clamp(23px, 3.6vw, 28px);
+  padding: 20px;
+}
+.text-large .hint-box {
+  font-size: 20px;
+}
+.text-large .explanation-box {
+  font-size: 20px;
+}
+.text-large .guide-banner {
+  font-size: 20px;
+}
+.text-large .hint-text {
+  font-size: 17px;
+}
+.text-large .toast {
+  font-size: 20px;
+}
+.text-large .slot-detail,
+.text-large .slot-date {
+  font-size: 16px;
+}
+.text-large .shop-name,
+.text-large .palette-name {
+  font-size: 17px;
+}
+.text-large .setting-label {
+  font-size: 21px;
+}
+.text-large .status-sub,
+.text-large .subject-name {
+  font-size: 17px;
+}
+
 /* せまい画面ではHUDを小さく */
 @media (max-width: 560px) {
   .hud-help {
     display: none;
   }
-  .hud-daily {
+  .hud-guide {
     top: 74px;
+  }
+  .guide-banner {
+    font-size: 14px;
+    padding: 8px 14px;
   }
   .subject-name {
     width: 86px;
     font-size: 13px;
+  }
+  .touch-pad {
+    width: 124px;
+    height: 124px;
+  }
+  .touch-action {
+    width: 80px;
+    height: 80px;
+    font-size: 20px;
   }
 }

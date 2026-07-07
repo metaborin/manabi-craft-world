@@ -1,6 +1,7 @@
 import { useGameStore } from '../store/gameStore'
 import { BLOCKS, BLOCK_MAP } from '../data/rewards'
 import { BUILD_GRID_SIZE } from '../data/world'
+import { UI } from '../data/uiText'
 
 /**
  * 建築画面。10x10のマスに持っているブロックを置ける。
@@ -14,19 +15,34 @@ export function BuildScreen() {
   const selectBuildBlock = useGameStore((s) => s.selectBuildBlock)
   if (!save) return null
 
+  const selectedDef = selection ? BLOCK_MAP[selection] : null
+  const canPlace = selection !== null && (save.blocks[selection] ?? 0) > 0
+
   return (
     <div className="screen panel-screen">
       <div className="panel-header">
-        <button className="btn btn-ghost btn-big" onClick={() => setScreen('world')}>
-          ◀ もどる
+        <button className="btn btn-secondary btn-big" onClick={() => setScreen('world')}>
+          ◀ {UI.common.backToWorld}
         </button>
-        <h2>🏠 けんちくエリア</h2>
-        <div className="hud-coins">🪙 {save.coins}</div>
+        <h2>{UI.build.heading}</h2>
+        <div className="hud-coins coin-bump" key={save.coins}>
+          🪙 {save.coins}
+        </div>
       </div>
 
-      <p className="hint-text center">
-        ブロックを えらんで マスを タップ！ おいた ブロックは もういちど タップで はずせるよ
-      </p>
+      {/* いま えらんでいるブロック */}
+      <div className="build-selected">
+        {selectedDef ? (
+          <>
+            <span>{UI.build.selectedLabel}</span>
+            <span className="palette-swatch" style={{ background: selectedDef.color }} />
+            <strong>{selectedDef.name}</strong>
+            <span className="palette-count">×{save.blocks[selection!] ?? 0}</span>
+          </>
+        ) : (
+          <span>👇 {UI.build.noSelection}</span>
+        )}
+      </div>
 
       {/* もっているブロック */}
       <div className="palette-row">
@@ -48,9 +64,9 @@ export function BuildScreen() {
         })}
       </div>
 
-      {/* グリッド */}
+      {/* グリッド。ブロックを選んでいるときは、置けるマスがわかるように光る */}
       <div
-        className="build-grid"
+        className={`build-grid ${canPlace ? 'placing' : ''}`}
         style={{ gridTemplateColumns: `repeat(${BUILD_GRID_SIZE}, 1fr)` }}
       >
         {save.buildGrid.map((cell, i) => (
@@ -65,8 +81,9 @@ export function BuildScreen() {
         ))}
       </div>
 
+      <p className="hint-text center">{UI.build.tip}</p>
       <p className="hint-text center">
-        ブロックが たりなくなったら クエストや ショップで あつめよう！
+        {UI.build.tipMore} {UI.build.needBlocks}
       </p>
     </div>
   )

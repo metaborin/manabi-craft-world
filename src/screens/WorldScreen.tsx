@@ -1,24 +1,18 @@
 import { useEffect, useRef } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { WorldCanvas, AVATARS } from '../game/WorldCanvas'
+import { WorldCanvas } from '../game/WorldCanvas'
 import { attachKeyboard, inputState, isTouchDevice } from '../game/input'
 import { TouchControls, InteractButton } from '../components/TouchControls'
+import { Hud } from '../components/Hud'
+import { TutorialGuide } from '../components/TutorialGuide'
 import { Toast } from '../components/Toast'
 import { QuestModal } from './QuestModal'
-import { GRADES, SUBJECTS } from '../data/grades'
-import { xpForLevel, DAILY_BONUS } from '../data/rewards'
-import type { Subject } from '../types/game'
-
-/** 曜日と学年から「きょうのおすすめ教科」を決める */
-function todaysSubject(grade: number): Subject {
-  const subjects = GRADES[grade as 1].mainSubjects
-  return subjects[new Date().getDay() % subjects.length]
-}
+import { UI } from '../data/uiText'
 
 export function WorldScreen() {
   const save = useGameStore((s) => s.save)
-  const setScreen = useGameStore((s) => s.setScreen)
   const quest = useGameStore((s) => s.quest)
+  const touchSetting = useGameStore((s) => s.settings.touchButtons)
   const dragRef = useRef<{ id: number; x: number } | null>(null)
 
   useEffect(() => {
@@ -26,14 +20,9 @@ export function WorldScreen() {
   }, [])
 
   if (!save) return null
-  const needXp = xpForLevel(save.level)
-  const rec = todaysSubject(save.grade)
-  const nextBonus =
-    save.dailyCount < DAILY_BONUS.small.at
-      ? DAILY_BONUS.small.at
-      : save.dailyCount < DAILY_BONUS.big.at
-        ? DAILY_BONUS.big.at
-        : null
+
+  const showTouchControls =
+    touchSetting === 'on' || (touchSetting === 'auto' && isTouchDevice())
 
   return (
     <div className="screen world-screen">
@@ -57,59 +46,14 @@ export function WorldScreen() {
         <WorldCanvas />
       </div>
 
-      {/* 上部HUD */}
-      <div className="hud-top">
-        <div className="hud-left">
-          <div className="hud-player">
-            <span
-              className="hud-avatar"
-              style={{ background: AVATARS[save.avatar % AVATARS.length].color }}
-            >
-              🙂
-            </span>
-            <div>
-              <div className="hud-name">{save.name}</div>
-              <div className="hud-level">
-                Lv.{save.level}
-                <span className="xp-bar">
-                  <span className="xp-fill" style={{ width: `${(save.xp / needXp) * 100}%` }} />
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="hud-coins">🪙 {save.coins}</div>
-        </div>
-        <div className="hud-right">
-          <button className="btn btn-chip" onClick={() => setScreen('grade')}>
-            {GRADES[save.grade].label}
-          </button>
-          <button className="btn btn-chip" onClick={() => setScreen('status')}>
-            📋 ステータス
-          </button>
-        </div>
-      </div>
+      <Hud />
+      <TutorialGuide />
 
-      {/* きょうのおすすめ＆進捗 */}
-      <div className="hud-daily">
-        <span className="daily-rec">
-          きょうの おすすめ：{SUBJECTS[rec].icon} {SUBJECTS[rec].name}
-        </span>
-        {nextBonus && (
-          <span className="daily-progress">
-            🎯 きょう {save.dailyCount}／{nextBonus}もん で ボーナス！
-          </span>
-        )}
-      </div>
+      {/* 操作説明（PCでタッチボタン非表示のとき） */}
+      {!showTouchControls && <div className="hud-help">{UI.world.keyboardHelp}</div>}
 
-      {/* 操作説明（PC） */}
-      {!isTouchDevice() && (
-        <div className="hud-help">
-          ⌨️ WASD・やじるし：いどう ／ スペース：ジャンプ ／ E：はなす ／ ドラッグ：カメラ
-        </div>
-      )}
-
-      <InteractButton />
-      {isTouchDevice() && <TouchControls />}
+      {/* タッチボタンを出すときは中央のピルは出さない（右下にしらべるボタンがある） */}
+      {showTouchControls ? <TouchControls /> : <InteractButton />}
       <Toast />
       {quest && <QuestModal />}
     </div>

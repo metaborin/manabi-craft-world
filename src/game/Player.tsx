@@ -1,0 +1,189 @@
+import { useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
+import * as THREE from 'three'
+import { useGameStore } from '../store/gameStore'
+import { WORLD_HALF, WORLD_NPCS } from '../data/world'
+import { PET_MAP } from '../data/rewards'
+import { AVATARS } from '../data/avatars'
+import { inputState } from './input'
+import { playerState } from './playerState'
+import type { WorldNPC } from '../types/game'
+
+/** プレイヤー（移動・ジャンプ・カメラ追従・ちかくのNPC判定・ペット） */
+export function Player() {
+  const group = useRef<THREE.Group>(null!)
+  const body = useRef<THREE.Group>(null!)
+  const petRef = useRef<THREE.Group>(null!)
+  const velocityY = useRef(0)
+  /** チュートリアル①「あるいてみよう」用の移動量 */
+  const walkedDistance = useRef(0)
+  const camera = useThree((s) => s.camera)
+  const avatar = useGameStore((s) => s.save?.avatar ?? 0)
+  const petType = useGameStore((s) => s.save?.pet?.type ?? null)
+  const questOpen = useGameStore((s) => s.quest !== null)
+  const color = AVATARS[avatar % AVATARS.length].color
+  const petDef = petType ? PET_MAP[petType] : null
+
+  useFrame(({ clock }, dt) => {
+    const delta = Math.min(dt, 0.05)
+    const g = group.current
+    if (!g) return
+
+    // 入力の合成（キーボード＋タッチパッド）
+    let mx = inputState.moveX + inputState.touchX
+    let mz = inputState.moveZ + inputState.touchZ
+    const len = Math.hypot(mx, mz)
+    if (len > 1) {
+      mx /= len
+      mz /= len
+    }
+    // クエスト中は動かさない
+    if (questOpen) {
+      mx = 0
+      mz = 0
+    }
+
+    // カメラの向きに合わせて移動方向を回転
+    const yaw = inputState.cameraYaw
+    const c = Math.cos(yaw)
+    const s = Math.sin(yaw)
+    const dx = c * mx + s * mz
+    const dz = -s * mx + c * mz
+
+    const speed = 5.5
+    g.position.x = THREE.MathUtils.clamp(g.position.x + dx * speed * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
+    g.position.z = THREE.MathUtils.clamp(g.position.z + dz * speed * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
+
+    // ジャンプ
+    if (inputState.jump && g.position.y <= 0.001 && !questOpen) {
+      velocityY.current = 5.5
+    }
+    velocityY.current -= 16 * delta
+    g.position.y = Math.max(0, g.position.y + velocityY.current * delta)
+    if (g.position.y === 0) velocityY.current = Math.max(velocityY.current, 0)
+
+    // 体の向きと歩きアニメ
+    const moving = Math.hypot(dx, dz) > 0.01
+    if (moving && body.current) {
+      const target = Math.atan2(dx, dz)
+      let diff = target - body.current.rotation.y
+      while (diff > Math.PI) diff -= Math.PI * 2
+      while (diff < -Math.PI) diff += Math.PI * 2
+      body.current.rotation.y += diff * Math.min(1, delta * 12)
+      body.current.position.y = Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.08
+    } else if (body.current) {
+      body.current.position.y = 0
+    }
+
+    // 位置を覚えておく（建築・ショップから戻っても同じ場所）
+    playerState.pos = [g.position.x, 0, g.position.z]
+
+    // チュートリアル①：すこし歩いたら達成
+    if (moving) {
+      walkedDistance.current += Math.hypot(dx, dz) * speed * delta
+      if (walkedDistance.current > 2.5) {
+        useGameStore.getState().advanceTutorial(0)
+      }
+    }
+
+    if (import.meta.env.DEV) {
+      ;(window as unknown as Record<string, unknown>).__playerPos = [
+        Math.round(g.position.x * 10) / 10,
+        Math.round(g.position.z * 10) / 10,
+      ]
+    }
+
+    // カメラ追従
+    const dist = 10.5
+    const camTarget = new THREE.Vector3(
+      g.position.x + Math.sin(yaw) * dist,
+      g.position.y + 7,
+      g.position.z + Math.cos(yaw) * dist,
+    )
+    camera.position.lerp(camTarget, 1 - Math.exp(-delta * 6))
+    camera.lookAt(g.position.x, g.position.y + 1.2, g.position.z)
+
+    // ちかくのNPCをさがす
+    let nearest: WorldNPC | null = null
+    let nearestD = 3.0
+    for (const npc of WORLD_NPCS) {
+      const d = Math.hypot(npc.pos[0] - g.position.x, npc.pos[2] - g.position.z)
+      if (d < nearestD) {
+        nearestD = d
+        nearest = npc
+      }
+    }
+    useGameStore.getState().setNearby(nearest)
+
+    // ペットがついてくる
+    if (petRef.current) {
+      const p = petRef.current
+      const behind = new THREE.Vector3(g.position.x - dx * 1.5 - 1.0, 0, g.position.z - dz * 1.5 + 0.6)
+      p.position.lerp(behind, Math.min(1, delta * 3))
+      p.position.y = 0.7 + Math.sin(clock.elapsedTime * 3) * 0.15
+    }
+  })
+
+  return (
+    <>
+      <group ref={group} position={playerState.pos}>
+        <group ref={body}>
+          {/* からだ */}
+          <mesh position={[0, 0.5, 0]}>
+            <boxGeometry args={[0.6, 0.7, 0.42]} />
+            <meshLambertMaterial color={color} />
+          </mesh>
+          {/* あし */}
+          <mesh position={[-0.16, 0.12, 0]}>
+            <boxGeometry args={[0.22, 0.28, 0.3]} />
+            <meshLambertMaterial color="#5f6b7a" />
+          </mesh>
+          <mesh position={[0.16, 0.12, 0]}>
+            <boxGeometry args={[0.22, 0.28, 0.3]} />
+            <meshLambertMaterial color="#5f6b7a" />
+          </mesh>
+          {/* あたま */}
+          <mesh position={[0, 1.15, 0]}>
+            <boxGeometry args={[0.58, 0.58, 0.54]} />
+            <meshLambertMaterial color="#ffdbac" />
+          </mesh>
+          {/* かみのけ */}
+          <mesh position={[0, 1.42, -0.05]}>
+            <boxGeometry args={[0.62, 0.2, 0.5]} />
+            <meshLambertMaterial color={color} />
+          </mesh>
+          {/* め */}
+          <mesh position={[-0.13, 1.18, 0.28]}>
+            <boxGeometry args={[0.08, 0.1, 0.02]} />
+            <meshBasicMaterial color="#3a3a3a" />
+          </mesh>
+          <mesh position={[0.13, 1.18, 0.28]}>
+            <boxGeometry args={[0.08, 0.1, 0.02]} />
+            <meshBasicMaterial color="#3a3a3a" />
+          </mesh>
+        </group>
+        {/* かげ */}
+        <mesh position={[0, 0.011, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.45, 16]} />
+          <meshBasicMaterial color="#000000" transparent opacity={0.18} />
+        </mesh>
+      </group>
+      {petDef && (
+        <group ref={petRef} position={[-1, 0.7, 6]}>
+          <mesh>
+            <boxGeometry args={[0.45, 0.45, 0.45]} />
+            <meshLambertMaterial color={petDef.color} />
+          </mesh>
+          <mesh position={[-0.1, 0.05, 0.23]}>
+            <boxGeometry args={[0.07, 0.09, 0.02]} />
+            <meshBasicMaterial color="#3a3a3a" />
+          </mesh>
+          <mesh position={[0.1, 0.05, 0.23]}>
+            <boxGeometry args={[0.07, 0.09, 0.02]} />
+            <meshBasicMaterial color="#3a3a3a" />
+          </mesh>
+        </group>
+      )}
+    </>
+  )
+}

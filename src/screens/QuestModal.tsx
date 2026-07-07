@@ -1,7 +1,22 @@
 import { useGameStore } from '../store/gameStore'
 import { SUBJECTS } from '../data/grades'
 import { BLOCK_MAP } from '../data/rewards'
+import { UI } from '../data/uiText'
 import { Furigana } from '../components/Furigana'
+
+/** クエスト完了画面のかるい紙ふぶき（CSSアニメーション） */
+function Confetti() {
+  const pieces = ['🎉', '⭐', '✨', '🎊', '🌟', '💛']
+  return (
+    <div className="confetti" aria-hidden>
+      {pieces.map((p, i) => (
+        <span key={i} className="confetti-piece" style={{ left: `${8 + i * 15}%`, animationDelay: `${i * 0.18}s` }}>
+          {p}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 /**
  * クエスト画面（1クエスト＝3問）。
@@ -25,7 +40,8 @@ export function QuestModal() {
     return (
       <div className="quest-overlay">
         <div className="quest-card quest-done">
-          <h2>クエスト クリア！🎉</h2>
+          <Confetti />
+          <h2>{UI.quest.doneHeading}</h2>
           <div className="done-stars">
             {quest.questions.map((_, i) => (
               <span key={i} className="star">
@@ -34,12 +50,12 @@ export function QuestModal() {
             ))}
           </div>
           <p className="done-message">
-            {quest.clearedCount}もん せいかい！ チャレンジ できたのが すごいよ！
+            {UI.quest.doneMessage(quest.clearedCount, quest.earnedCoins)}
           </p>
-          <p className="done-sub">つかれたら やすんでも いいからね☕</p>
+          <p className="done-sub">{UI.quest.doneSub}</p>
           <div className="bottom-row">
             <button className="btn btn-secondary btn-big" onClick={closeQuest}>
-              ワールドへ もどる
+              {UI.common.backToWorld}
             </button>
             <button
               className="btn btn-primary btn-big"
@@ -49,7 +65,7 @@ export function QuestModal() {
                 useGameStore.getState().startQuest(sub)
               }}
             >
-              もういちど あそぶ 🔁
+              {UI.quest.playAgain}
             </button>
           </div>
         </div>
@@ -65,16 +81,18 @@ export function QuestModal() {
           <div className="correct-mark">⭕</div>
           <h2>{quest.message}</h2>
           <div className="explanation-box">
-            <span className="explanation-label">かいせつ</span>
+            <span className="explanation-label">{UI.quest.explanationLabel}</span>
             <p>
               <Furigana text={q.explanation} />
             </p>
           </div>
           {quest.lastReward && (
             <div className="reward-box">
-              <span>ごほうび：</span>
+              <span>{UI.quest.rewardLabel}</span>
               <span className="reward-item">🪙 +{quest.lastReward.coins}</span>
-              <span className="reward-item">✨ けいけんち +{quest.lastReward.xp}</span>
+              <span className="reward-item">
+                ✨ {UI.quest.xpName} +{quest.lastReward.xp}
+              </span>
               {quest.lastReward.blockNames.map((b) => (
                 <span key={b} className="reward-item">
                   {BLOCK_MAP[b]?.emoji} {BLOCK_MAP[b]?.name}
@@ -82,17 +100,19 @@ export function QuestModal() {
               ))}
             </div>
           )}
-          {quest.levelUp && <div className="levelup-banner">🎊 レベルアップ！</div>}
+          {quest.levelUp && <div className="levelup-banner">{UI.quest.levelUp}</div>}
           {quest.newBadges.length > 0 && (
-            <div className="levelup-banner">🏅 あたらしい バッジを ゲット！</div>
+            <div className="levelup-banner">{UI.quest.newBadge}</div>
           )}
           {quest.bonusMessages.map((m, i) => (
             <div key={i} className="bonus-banner">
               {m}
             </div>
           ))}
-          <button className="btn btn-primary btn-big" onClick={questNext}>
-            {isLast ? 'けっかを みる ▶' : `つぎの もんだいへ ▶（あと${quest.questions.length - quest.index - 1}もん）`}
+          <button className="btn btn-primary btn-big btn-wide" onClick={questNext}>
+            {isLast
+              ? UI.quest.seeResult
+              : UI.quest.nextQuestion(quest.questions.length - quest.index - 1)}
           </button>
         </div>
       </div>
@@ -113,7 +133,7 @@ export function QuestModal() {
             ))}
           </span>
           <button className="btn-close" onClick={closeQuest} aria-label="やめる">
-            ✕ やめる
+            {UI.common.quit}
           </button>
         </div>
 
@@ -135,9 +155,7 @@ export function QuestModal() {
               💡💡 <Furigana text={q.hint2} />
             </div>
           )}
-          {quest.assist && (
-            <div className="assist-banner">✨ ひかっている こたえを おしてみよう！</div>
-          )}
+          {quest.assist && <div className="assist-banner">{UI.quest.assistBanner}</div>}
 
           <div className="choice-list">
             {q.choices.map((c, i) => (
@@ -153,7 +171,7 @@ export function QuestModal() {
 
           {quest.hintLevel === 0 && (
             <button className="btn btn-ghost" onClick={showHint}>
-              💡 ヒントを みる
+              {UI.common.hint}
             </button>
           )}
         </div>
