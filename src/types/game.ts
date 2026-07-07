@@ -64,6 +64,8 @@ export interface PetDef {
   color: string
   emoji: string
   price: number
+  /** せいかく・説明 */
+  desc: string
 }
 
 export interface PetState {
@@ -148,6 +150,7 @@ export type Screen =
   | 'shop'
   | 'settings'
   | 'zukan'
+  | 'avatar'
 
 /** ワールド内で話しかけられるもの（NPC・看板・宝箱など） */
 export interface WorldNPC {

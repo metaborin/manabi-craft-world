@@ -1,6 +1,6 @@
 import { useGameStore } from '../store/gameStore'
 import { GRADES, SUBJECTS } from '../data/grades'
-import { BADGES, BLOCKS, PET_MAP, petStage, xpForLevel } from '../data/rewards'
+import { BADGES, BLOCKS, PET_MAP, petStage, petNextStage, xpForLevel } from '../data/rewards'
 import { getQuestions } from '../data/questions'
 import { AVATARS } from '../data/avatars'
 import { TREASURE_COUNT } from '../data/world'
@@ -41,6 +41,9 @@ export function StatusScreen() {
               <span>{GRADES[save.grade].label}</span>
               <button className="btn btn-chip" onClick={() => setScreen('grade')}>
                 がくねんを かえる
+              </button>
+              <button className="btn btn-chip" onClick={() => setScreen('avatar')}>
+                {UI.avatar.change}
               </button>
             </div>
           </div>
@@ -111,13 +114,35 @@ export function StatusScreen() {
         <div className="status-card">
           <div className="status-row-label">ペット</div>
           {pet && save.pet ? (
-            <div className="pet-row">
-              <span className="pet-emoji">{pet.emoji}</span>
-              <div>
-                <div>{pet.name}（{petStage(save.pet.growth)}）</div>
-                <div className="status-sub">せいちょうポイント：{save.pet.growth}（もんだいに せいかいすると そだつよ）</div>
+            <>
+              <div className="pet-row">
+                <span className="pet-emoji">{pet.emoji}</span>
+                <div>
+                  <div>
+                    {pet.name}（{petStage(save.pet.growth)}）
+                  </div>
+                  <div className="status-sub">{pet.desc}</div>
+                </div>
               </div>
-            </div>
+              {(() => {
+                const next = petNextStage(save.pet.growth)
+                return next ? (
+                  <>
+                    <div className="xp-bar large">
+                      <span
+                        className="xp-fill pet-fill"
+                        style={{ width: `${next.progress * 100}%` }}
+                      />
+                    </div>
+                    <div className="status-sub">
+                      {UI.pet.growUp(next.next)} {next.remaining}かい せいかい！（{UI.pet.growHint}）
+                    </div>
+                  </>
+                ) : (
+                  <div className="status-sub">{UI.pet.grownUp}</div>
+                )
+              })()}
+            </>
           ) : (
             <div className="status-sub">まだ いないよ。ショップで たまごを かってみよう🥚</div>
           )}

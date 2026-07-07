@@ -24,9 +24,30 @@ export const BLOCK_MAP: Record<string, BlockDef> = Object.fromEntries(
 
 /** ペットの種類（ショップでたまごを買うとなかまになる） */
 export const PETS: PetDef[] = [
-  { id: 'robo', name: 'ちびロボ', color: '#8fb8d8', emoji: '🤖', price: 60 },
-  { id: 'usagi', name: 'ほしうさぎ', color: '#fff1c9', emoji: '🐰', price: 60 },
-  { id: 'ryu', name: 'こりゅう', color: '#8ed98c', emoji: '🐲', price: 60 },
+  {
+    id: 'robo',
+    name: 'ちびロボ',
+    color: '#8fb8d8',
+    emoji: '🤖',
+    price: 60,
+    desc: 'メカだけど あまえんぼう。せいかいすると ピカピカ よろこぶ',
+  },
+  {
+    id: 'usagi',
+    name: 'ほしうさぎ',
+    color: '#fff1c9',
+    emoji: '🐰',
+    price: 60,
+    desc: 'よぞらから きた うさぎ。ぴょんぴょん はねるのが だいすき',
+  },
+  {
+    id: 'ryu',
+    name: 'こりゅう',
+    color: '#8ed98c',
+    emoji: '🐲',
+    price: 60,
+    desc: 'ちいさな ドラゴン。いつか おおきく なるかも…？',
+  },
 ]
 
 export const PET_MAP: Record<string, PetDef> = Object.fromEntries(
@@ -38,6 +59,15 @@ export function petStage(growth: number): string {
   if (growth >= 30) return 'おとな'
   if (growth >= 10) return 'こども'
   return 'あかちゃん'
+}
+
+/** つぎの成長段階までの情報（おとなになったらnull） */
+export function petNextStage(
+  growth: number,
+): { next: string; remaining: number; progress: number } | null {
+  if (growth < 10) return { next: 'こども', remaining: 10 - growth, progress: growth / 10 }
+  if (growth < 30) return { next: 'おとな', remaining: 30 - growth, progress: (growth - 10) / 20 }
+  return null
 }
 
 /** 学習バッジ。checkがtrueを返すと獲得 */

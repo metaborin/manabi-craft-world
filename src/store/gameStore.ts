@@ -13,7 +13,8 @@ import { SUBJECTS } from '../data/grades'
 import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, xpForLevel } from '../data/rewards'
 import { TREASURE_REWARDS } from '../data/world'
 import { UI } from '../data/uiText'
-import { petCelebrate, type FxType } from '../game/effects'
+import { petCelebrate, playFx, type FxType } from '../game/effects'
+import { playSound, soundState } from '../game/sound'
 import {
   createNewSave,
   deleteSave,
@@ -79,6 +80,7 @@ interface GameState {
   startNewOnSlot: (slot: SlotId) => void
   createSave: (name: string, avatar: number) => void
   setGrade: (g: Grade) => void
+  setAvatar: (i: number) => void
   setNearby: (npc: WorldNPC | null) => void
   interact: () => void
   dialogNext: () => void
@@ -154,11 +156,15 @@ function getBlockPrice(blockId: string): number | null {
   return BLOCK_MAP[blockId]?.price ?? null
 }
 
+const initialSettings = loadSettings()
+// 効果音モジュールに設定を反映（以後は updateSettings が同期する）
+soundState.enabled = initialSettings.sound === 'on'
+
 export const useGameStore = create<GameState>((set, get) => ({
   screen: 'title',
   slot: null,
   save: null,
-  settings: loadSettings(),
+  settings: initialSettings,
   settingsReturn: 'title',
   nearby: null,
   quest: null,
@@ -177,6 +183,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   updateSettings: (patch) => {
     const next = { ...get().settings, ...patch }
     writeSettings(next)
+    soundState.enabled = next.sound === 'on'
     set({ settings: next })
   },
 
@@ -213,6 +220,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ screen: 'world' })
   },
 
+  setAvatar: (i) => {
+    mutateSave(get, set, (s) => {
+      s.avatar = i
+    })
+  },
+
   setNearby: (npc) => {
     if (get().nearby?.id !== npc?.id) {
       set({ nearby: npc })
@@ -241,6 +254,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       case 'quest':
       case 'sign':
         // 会話ウィンドウを開く（セリフがなければ即クエスト）
+        playSound('talk')
         if (nearby.dialog && nearby.dialog.length > 0) {
           set({ dialog: { npc: nearby, index: 0 } })
         } else if (nearby.kind === 'quest') {
@@ -262,7 +276,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             s.chestDate = todayString()
             s.coins += 10
           })
-          get().triggerFx('chest', '+10 🪙')
+          playFx('chest', '+10 🪙')
+          petCelebrate(1400)
           get().showToast(UI.world.chestOpened)
         }
         break
@@ -290,7 +305,8 @@ export const useGameStore = create<GameState>((set, get) => ({
           }
           newBadges = checkBadges(s)
         })
-        get().triggerFx('chest', parts.join('　'))
+        playFx('chest', parts.join('　'))
+        petCelebrate(1600)
         get().showToast(`${UI.world.treasureOpened} ${parts.join('、')} をゲット！🎉`)
         if (newBadges.length > 0) {
           setTimeout(() => get().showToast(UI.toast.newBadge), 2600)
@@ -355,6 +371,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const correct = choice === q.answer
 
     if (!correct) {
+      playSound('wrong')
       const wrong = quest.wrong + 1
       set({
         quest: {
@@ -416,6 +433,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     // チュートリアル④：はじめて せいかいした
     get().advanceTutorial(3)
 
+    // 正解音（レベルアップなら少しあとにファンファーレ）
+    playSound('correct')
+    if (levelUp) setTimeout(() => playSound('levelup'), 400)
+
     // ペットがよろこぶ（レベルアップのときは長めに）
     petCelebrate(levelUp ? 3000 : 1800)
 
@@ -476,11 +497,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     const current = save.buildGrid[cell]
     if (current) {
       // 置いてあるブロックをはずす（手もとに戻る）
+      playSound('remove')
       mutateSave(get, set, (s) => {
         s.blocks[current] = (s.blocks[current] ?? 0) + 1
         s.buildGrid[cell] = null
       })
     } else if (buildSelection && (save.blocks[buildSelection] ?? 0) > 0) {
+      playSound('place')
       mutateSave(get, set, (s) => {
         s.blocks[buildSelection] = (s.blocks[buildSelection] ?? 0) - 1
         s.buildGrid[cell] = buildSelection
@@ -509,6 +532,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       s.blocks[blockId] = (s.blocks[blockId] ?? 0) + 1
       checkBadges(s)
     })
+    playSound('buy')
     get().showToast(UI.shop.bought)
   },
 
@@ -529,6 +553,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       s.pet = { type: petId, growth: 0 }
       checkBadges(s)
     })
+    playSound('buy')
     get().showToast(UI.shop.petBought(pet.name, pet.emoji))
   },
 

@@ -129,7 +129,8 @@ export const UI = {
     tabDeco: '✨ かざり',
     tabPets: '🐾 ペット',
     tabAvatar: '🎨 アバター',
-    avatarComingSoon: 'アバターの きせかえは じゅんびちゅう！ おたのしみに🎨',
+    avatarComingSoon:
+      'みためは ステータスがめんの「🎨みためを かえる」で えらべるよ！ おようふくの おみせは じゅんびちゅう🎨',
     notForSale: 'たからばこや クエストで みつけよう！',
     petSection: '🥚 ペットのたまご（1ぴきだけ かえるよ）',
     owned: (n: number) => `もっているかず：${n}`,
@@ -153,13 +154,27 @@ export const UI = {
     touchAuto: 'じどう',
     touchOn: 'ひょうじする',
     touchOff: 'ひょうじしない',
-    sound: 'こうかおん（じゅんびちゅう）',
+    sound: 'こうかおん',
     soundOn: 'オン',
     soundOff: 'オフ',
     furigana: 'ふりがな',
     furiganaOn: 'つける',
     furiganaOff: 'つけない',
     note: 'せっていは この たんまつに ほぞんされるよ',
+  },
+
+  avatar: {
+    heading: '🎨 みための せってい',
+    change: '🎨 みためを かえる',
+    current: 'いまの すがた',
+    choose: 'すきな すがたを えらぼう！ ワールドの じぶんに すぐ はんえいされるよ',
+    changed: (name: string) => `${name}タイプに へんしん！✨`,
+  },
+
+  pet: {
+    growUp: (stage: string) => `つぎは「${stage}」！ あと`,
+    grownUp: 'りっぱな おとなに なったよ！🎉',
+    growHint: 'もんだいに せいかいすると そだつよ',
   },
 
   zukan: {
@@ -169,6 +184,7 @@ export const UI = {
     chests: '🎁 みつけた たからばこ',
     npcs: '👋 であった なかま',
     pet: '🐾 ペット',
+    avatars: '🎨 アバター',
     unknown: '？？？',
     chestHint: 'ワールドの すみずみを たんけんしてみよう！',
     openZukan: '📖 コレクション',

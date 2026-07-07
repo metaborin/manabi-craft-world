@@ -1579,6 +1579,174 @@ ruby rt {
   font-weight: bold;
 }
 
+/* ============ フェーズ2.6：アバター・ペット・演出 ============ */
+
+/* アバターのミニプレビュー（CSSボクセル風） */
+.ava-prev {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 64px;
+}
+.ava-hat {
+  width: 44px;
+  height: 12px;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+}
+.ava-hat.hat-cap::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -7px;
+  right: -7px;
+  height: 5px;
+  border-radius: 3px;
+  background: inherit;
+}
+.ava-hat .ava-leaf,
+.ava-hat .ava-star {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+}
+.ava-hat .ava-star {
+  color: #ffd54f;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
+}
+.ava-hat.hat-band::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #fff3e0;
+  border-radius: 2px;
+}
+.ava-face {
+  width: 40px;
+  height: 26px;
+  background: #ffdbac;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.ava-eye {
+  width: 5px;
+  height: 7px;
+  background: #3a3a3a;
+  border-radius: 2px;
+}
+.ava-body {
+  width: 44px;
+  height: 20px;
+  border-radius: 0 0 8px 8px;
+}
+
+/* なまえ画面のアバター選択（白カードに変更） */
+.avatar-choice {
+  background: #fff;
+  color: var(--brown);
+  width: 104px;
+  height: 128px;
+}
+.avatar-choice .avatar-name {
+  text-shadow: none;
+  font-size: 14px;
+}
+
+/* みためをかえる画面 */
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  width: min(720px, 94vw);
+}
+.avatar-card {
+  background: #fff;
+  border: 4px solid transparent;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 20px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--brown);
+  position: relative;
+  animation: pop 0.25s backwards;
+}
+.avatar-card:nth-child(2) { animation-delay: 0.06s; }
+.avatar-card:nth-child(3) { animation-delay: 0.12s; }
+.avatar-card:nth-child(4) { animation-delay: 0.18s; }
+.avatar-card.selected {
+  border-color: var(--orange);
+  background: #fff9e0;
+}
+.avatar-card:active {
+  transform: scale(0.96);
+}
+.avatar-card-name {
+  font-size: 17px;
+  font-weight: bold;
+}
+.avatar-card-desc {
+  font-size: 12px;
+  color: #8a7767;
+}
+.avatar-current-chip {
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 3px 12px;
+  box-shadow: var(--shadow);
+}
+
+/* 図鑑：いまのすがた */
+.zukan-item.current {
+  border-color: var(--orange);
+}
+.zukan-current {
+  background: var(--orange);
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+/* ペットの成長バー */
+.xp-fill.pet-fill {
+  background: linear-gradient(90deg, #8ed98c, #4cb944);
+}
+
+/* カードがふわっと出る */
+.status-card,
+.shop-item,
+.slot-card {
+  animation: card-in 0.3s backwards;
+}
+.status-card:nth-child(2) { animation-delay: 0.05s; }
+.status-card:nth-child(3) { animation-delay: 0.1s; }
+.status-card:nth-child(4) { animation-delay: 0.15s; }
+.status-card:nth-child(5) { animation-delay: 0.2s; }
+.status-card:nth-child(6) { animation-delay: 0.25s; }
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
 /* ---- ホバー演出（マウス端末のみ） ---- */
 @media (hover: hover) {
   .btn {

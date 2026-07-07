@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { AVATARS } from '../data/avatars'
+import { AvatarPreview } from '../components/AvatarPreview'
 
 const RANDOM_NAMES = ['そらまめ', 'ほしのこ', 'みどりん', 'こはるん', 'ぽんた', 'ひかり', 'らいと', 'つむぎ']
 
@@ -30,17 +31,18 @@ export function NameScreen() {
       </div>
       <p className="hint-text">※ ほんとうの なまえじゃなくて いいよ</p>
 
-      <h2>すきな いろを えらぼう</h2>
+      <h2>すきな すがたを えらぼう</h2>
       <div className="avatar-row">
         {AVATARS.map((a, i) => (
           <button
             key={i}
             className={`avatar-choice ${avatar === i ? 'selected' : ''}`}
-            style={{ background: a.color }}
             onClick={() => setAvatar(i)}
           >
-            <span className="avatar-face">🙂</span>
-            <span className="avatar-name">{a.name}</span>
+            <AvatarPreview def={a} />
+            <span className="avatar-name">
+              {a.icon} {a.name}
+            </span>
           </button>
         ))}
       </div>

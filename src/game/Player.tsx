@@ -8,6 +8,7 @@ import { AVATARS } from '../data/avatars'
 import { inputState } from './input'
 import { playerState } from './playerState'
 import { petMood } from './effects'
+import { playSound } from './sound'
 import { TextSprite } from './TextSprite'
 import type { WorldNPC } from '../types/game'
 
@@ -29,7 +30,8 @@ export function Player() {
   const petType = useGameStore((s) => s.save?.pet?.type ?? null)
   const questOpen = useGameStore((s) => s.quest !== null)
   const dialogOpen = useGameStore((s) => s.dialog !== null)
-  const color = AVATARS[avatar % AVATARS.length].color
+  const avatarDef = AVATARS[avatar % AVATARS.length]
+  const color = avatarDef.color
   const petDef = petType ? PET_MAP[petType] : null
 
   useFrame(({ clock }, dt) => {
@@ -73,6 +75,7 @@ export function Player() {
     if (inputState.jump && g.position.y <= 0.001 && !paused) {
       velocityY.current = 6.2
       airborne.current = true
+      playSound('jump')
     }
     velocityY.current -= 17 * delta
     g.position.y = Math.max(0, g.position.y + velocityY.current * delta)
@@ -189,11 +192,35 @@ export function Player() {
             <boxGeometry args={[0.58, 0.58, 0.54]} />
             <meshLambertMaterial color="#ffdbac" />
           </mesh>
-          {/* かみのけ */}
+          {/* かみのけ・ぼうし（アバタータイプで変わる） */}
           <mesh position={[0, 1.42, -0.05]}>
             <boxGeometry args={[0.62, 0.2, 0.5]} />
-            <meshLambertMaterial color={color} />
+            <meshLambertMaterial color={avatarDef.hair} />
           </mesh>
+          {avatarDef.hat === 'cap' && (
+            <mesh position={[0, 1.4, 0.34]}>
+              <boxGeometry args={[0.52, 0.09, 0.3]} />
+              <meshLambertMaterial color={avatarDef.hair} />
+            </mesh>
+          )}
+          {avatarDef.hat === 'leaf' && (
+            <mesh position={[0, 1.58, 0]} rotation={[0, 0.5, 0.12]}>
+              <boxGeometry args={[0.14, 0.08, 0.34]} />
+              <meshLambertMaterial color="#3f8f3a" />
+            </mesh>
+          )}
+          {avatarDef.hat === 'band' && (
+            <mesh position={[0, 1.31, 0]}>
+              <boxGeometry args={[0.63, 0.1, 0.59]} />
+              <meshLambertMaterial color="#fff3e0" />
+            </mesh>
+          )}
+          {avatarDef.hat === 'star' && (
+            <mesh position={[0, 1.62, 0]} rotation={[0, 0, Math.PI / 4]}>
+              <boxGeometry args={[0.2, 0.2, 0.12]} />
+              <meshLambertMaterial color="#ffd54f" />
+            </mesh>
+          )}
           {/* め */}
           <mesh position={[-0.13, 1.18, 0.28]}>
             <boxGeometry args={[0.08, 0.1, 0.02]} />

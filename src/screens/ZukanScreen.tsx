@@ -2,7 +2,9 @@ import { useGameStore } from '../store/gameStore'
 import { BLOCKS, BADGES, PET_MAP, petStage } from '../data/rewards'
 import { CHARACTER_NPCS, TREASURE_COUNT } from '../data/world'
 import { SUBJECTS } from '../data/grades'
+import { AVATARS } from '../data/avatars'
 import { UI } from '../data/uiText'
+import { AvatarPreview } from '../components/AvatarPreview'
 
 /**
  * コレクション（図鑑）画面。
@@ -130,12 +132,32 @@ export function ZukanScreen() {
                 <div>
                   {pet.name}（{petStage(save.pet.growth)}）
                 </div>
+                <div className="status-sub">{pet.desc}</div>
                 <div className="status-sub">{UI.status.petGrowth(save.pet.growth)}</div>
               </div>
             </div>
           ) : (
             <div className="status-sub">{UI.status.noPet}</div>
           )}
+        </div>
+
+        {/* アバター */}
+        <div className="status-card">
+          <div className="status-row-label">{UI.zukan.avatars}</div>
+          <div className="zukan-grid">
+            {AVATARS.map((a, i) => {
+              const current = save.avatar % AVATARS.length === i
+              return (
+                <div key={i} className={`zukan-item got ${current ? 'current' : ''}`}>
+                  <AvatarPreview def={a} />
+                  <span className="zukan-name">
+                    {a.icon} {a.name}
+                  </span>
+                  {current && <span className="zukan-current">{UI.avatar.current}</span>}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
