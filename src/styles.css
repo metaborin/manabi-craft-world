@@ -1,0 +1,970 @@
+/* ============ 全体 ============ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --font: 'Hiragino Maru Gothic ProN', 'BIZ UDGothic', 'Yu Gothic UI', 'Yu Gothic',
+    'Meiryo', sans-serif;
+  --cream: #fff8ec;
+  --brown: #4a3728;
+  --orange: #ff9f43;
+  --orange-dark: #e8862f;
+  --green: #2ecc71;
+  --green-dark: #27ae60;
+  --sky: #aee7ff;
+  --card: #ffffff;
+  --shadow: 0 4px 14px rgba(74, 55, 40, 0.15);
+}
+
+html,
+body,
+#root,
+.app {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font);
+  color: var(--brown);
+}
+
+body {
+  background: linear-gradient(#aee7ff, #d8f3e3);
+}
+
+button {
+  font-family: var(--font);
+  cursor: pointer;
+  border: none;
+}
+
+ruby rt {
+  font-size: 0.5em;
+  color: #8a7767;
+}
+
+.screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* ============ ボタン ============ */
+.btn {
+  border-radius: 16px;
+  font-weight: bold;
+  font-size: 18px;
+  padding: 10px 18px;
+  transition: transform 0.1s, filter 0.1s;
+  color: #fff;
+}
+.btn:active {
+  transform: scale(0.95);
+}
+.btn:disabled {
+  filter: grayscale(0.8);
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-big {
+  font-size: 22px;
+  padding: 14px 26px;
+  min-height: 56px;
+}
+.btn-small {
+  font-size: 14px;
+  padding: 6px 12px;
+}
+.btn-primary {
+  background: var(--orange);
+  box-shadow: 0 4px 0 var(--orange-dark);
+}
+.btn-secondary {
+  background: var(--green);
+  box-shadow: 0 4px 0 var(--green-dark);
+}
+.btn-ghost {
+  background: #fff;
+  color: var(--brown);
+  border: 2px solid #d8c9b8;
+}
+.btn-danger {
+  background: #e57373;
+  box-shadow: 0 3px 0 #c62828;
+}
+.btn-chip {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--brown);
+  border-radius: 999px;
+  font-size: 16px;
+  padding: 8px 16px;
+  box-shadow: var(--shadow);
+}
+
+.bottom-row {
+  display: flex;
+  gap: 14px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hint-text {
+  color: #8a7767;
+  font-size: 15px;
+  margin: 6px 0 14px;
+}
+.hint-text.center {
+  text-align: center;
+}
+
+/* ============ タイトル ============ */
+.title-screen {
+  justify-content: center;
+  gap: 26px;
+}
+.title-logo {
+  text-align: center;
+}
+.title-block {
+  font-size: 46px;
+}
+.title-logo h1 {
+  font-size: clamp(30px, 6vw, 52px);
+  color: var(--brown);
+  text-shadow: 3px 3px 0 #fff;
+  letter-spacing: 2px;
+}
+.title-sub {
+  font-size: 18px;
+  color: #6b5849;
+  margin-top: 6px;
+}
+.slot-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.slot-card {
+  background: var(--card);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+  width: min(320px, 88vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.slot-title {
+  font-size: 20px;
+  font-weight: bold;
+  background: var(--cream);
+  border-radius: 999px;
+  padding: 4px 18px;
+}
+.slot-info {
+  text-align: center;
+  min-height: 48px;
+}
+.slot-name {
+  font-size: 24px;
+  font-weight: bold;
+  display: block;
+}
+.slot-detail {
+  font-size: 15px;
+  color: #8a7767;
+}
+.slot-empty {
+  color: #b3a494;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.slot-delete-confirm {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+.title-note {
+  color: #6b5849;
+  font-size: 14px;
+}
+
+/* ============ なまえ・アバター ============ */
+.name-screen {
+  justify-content: center;
+  gap: 8px;
+}
+.name-screen h2 {
+  margin-top: 18px;
+}
+.name-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.name-input {
+  font-family: var(--font);
+  font-size: 26px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  border: 3px solid #d8c9b8;
+  width: min(300px, 60vw);
+  text-align: center;
+  background: #fff;
+  color: var(--brown);
+}
+.name-input:focus {
+  outline: none;
+  border-color: var(--orange);
+}
+.avatar-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.avatar-choice {
+  border-radius: 20px;
+  width: 92px;
+  height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 4px solid transparent;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: var(--shadow);
+}
+.avatar-choice.selected {
+  border-color: var(--brown);
+  transform: scale(1.08);
+}
+.avatar-face {
+  font-size: 34px;
+}
+.avatar-name {
+  font-size: 14px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ============ がくねん ============ */
+.grade-screen {
+  justify-content: center;
+}
+.grade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  width: min(760px, 94vw);
+  margin-bottom: 18px;
+}
+.grade-card {
+  background: var(--card);
+  border-radius: 20px;
+  border: 4px solid transparent;
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--brown);
+}
+.grade-card.selected {
+  border-color: var(--orange);
+}
+.grade-card:active {
+  transform: scale(0.97);
+}
+.grade-num {
+  font-size: 38px;
+  font-weight: bold;
+  color: var(--orange);
+}
+.grade-label {
+  font-size: 20px;
+  font-weight: bold;
+}
+.grade-desc {
+  font-size: 13px;
+  color: #8a7767;
+}
+.grade-subjects {
+  font-size: 20px;
+}
+
+/* ============ ワールド ============ */
+.world-screen {
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+.world-canvas-wrap {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+.hud-top {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  gap: 8px;
+}
+.hud-left,
+.hud-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  pointer-events: auto;
+  flex-wrap: wrap;
+}
+.hud-player {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 6px 16px 6px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow);
+}
+.hud-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+.hud-avatar.big {
+  width: 64px;
+  height: 64px;
+  font-size: 36px;
+}
+.hud-name {
+  font-weight: bold;
+  font-size: 15px;
+}
+.hud-level {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.xp-bar {
+  display: inline-block;
+  width: 70px;
+  height: 10px;
+  background: #e8ddd0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.xp-bar.large {
+  width: 100%;
+  height: 18px;
+}
+.xp-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ffd54f, var(--orange));
+  border-radius: 999px;
+  transition: width 0.4s;
+}
+.hud-coins {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: bold;
+  font-size: 17px;
+  box-shadow: var(--shadow);
+}
+.hud-daily {
+  position: absolute;
+  top: 66px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  pointer-events: none;
+  max-width: 94vw;
+}
+.daily-rec,
+.daily-progress {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  box-shadow: var(--shadow);
+}
+.hud-help {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #6b5849;
+  pointer-events: none;
+}
+.interact-btn {
+  position: absolute;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--orange);
+  color: #fff;
+  font-size: 20px;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 14px 28px;
+  box-shadow: 0 5px 0 var(--orange-dark), var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: pop 0.25s;
+}
+.interact-btn:active {
+  transform: translateX(-50%) scale(0.95);
+}
+.interact-key {
+  font-size: 11px;
+  opacity: 0.85;
+}
+@keyframes pop {
+  from {
+    transform: translateX(-50%) scale(0.6);
+    opacity: 0;
+  }
+}
+
+/* タッチ操作 */
+.touch-pad {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.touch-pad-knob {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+.touch-pad-label {
+  position: absolute;
+  bottom: -22px;
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+}
+.touch-jump {
+  position: absolute;
+  bottom: 40px;
+  right: 24px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--brown);
+  box-shadow: var(--shadow);
+  touch-action: none;
+}
+
+/* トースト */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(74, 55, 40, 0.92);
+  color: #fff;
+  border-radius: 16px;
+  padding: 14px 22px;
+  font-size: 17px;
+  max-width: min(560px, 90vw);
+  box-shadow: var(--shadow);
+  z-index: 200;
+  animation: pop-up 0.3s;
+}
+@keyframes pop-up {
+  from {
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+  }
+}
+
+/* ============ クエスト ============ */
+.quest-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(74, 55, 40, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 12px;
+}
+.quest-card {
+  background: var(--cream);
+  border-radius: 24px;
+  width: min(620px, 96vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: pop 0.25s;
+}
+.quest-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 24px 24px 0 0;
+  color: #fff;
+}
+.quest-subject {
+  font-weight: bold;
+  font-size: 17px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.25);
+}
+.quest-dots {
+  display: flex;
+  gap: 6px;
+}
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+}
+.dot.done {
+  background: #fff;
+}
+.dot.now {
+  background: #ffe082;
+  outline: 2px solid #fff;
+}
+.btn-close {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.quest-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: stretch;
+}
+.quest-question {
+  font-size: clamp(20px, 3.4vw, 26px);
+  font-weight: bold;
+  line-height: 1.6;
+  text-align: center;
+}
+.quest-visual {
+  font-size: clamp(26px, 5vw, 40px);
+  text-align: center;
+  background: #fff;
+  border-radius: 16px;
+  padding: 10px;
+}
+.choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.choice-btn {
+  background: #fff;
+  border: 3px solid #d8c9b8;
+  border-radius: 18px;
+  font-size: clamp(19px, 3vw, 24px);
+  font-weight: bold;
+  padding: 16px;
+  color: var(--brown);
+  transition: transform 0.1s;
+}
+.choice-btn:active {
+  transform: scale(0.97);
+}
+.choice-btn.assist-glow {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 4px rgba(255, 159, 67, 0.35), 0 0 18px rgba(255, 159, 67, 0.7);
+  animation: glow 1s infinite alternate;
+}
+@keyframes glow {
+  to {
+    box-shadow: 0 0 0 6px rgba(255, 159, 67, 0.45), 0 0 26px rgba(255, 159, 67, 0.9);
+  }
+}
+.feedback-banner {
+  background: #e3f2fd;
+  border-radius: 14px;
+  padding: 10px 14px;
+  text-align: center;
+  font-weight: bold;
+  color: #1565c0;
+}
+.hint-box {
+  background: #fff9e0;
+  border: 2px dashed #e8b93e;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+.hint-box.hint-strong {
+  background: #fff3cc;
+}
+.assist-banner {
+  text-align: center;
+  font-weight: bold;
+  color: var(--orange-dark);
+}
+
+/* 正解画面 */
+.quest-correct,
+.quest-done {
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.correct-mark {
+  font-size: 60px;
+  animation: pop 0.3s;
+}
+.explanation-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px 18px;
+  width: 100%;
+  line-height: 1.7;
+  font-size: 17px;
+}
+.explanation-label {
+  display: inline-block;
+  background: var(--green);
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 2px 12px;
+  margin-bottom: 6px;
+}
+.reward-box {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+}
+.reward-item {
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: bold;
+  box-shadow: var(--shadow);
+}
+.levelup-banner,
+.bonus-banner {
+  background: linear-gradient(90deg, #ffd54f, #ff9f43);
+  color: #fff;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 8px 20px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  animation: pop 0.4s;
+}
+.done-stars {
+  font-size: 44px;
+  display: flex;
+  gap: 8px;
+}
+.done-message {
+  font-size: 19px;
+  font-weight: bold;
+}
+.done-sub {
+  color: #8a7767;
+  font-size: 15px;
+}
+
+/* ============ パネル画面（ステータス・建築・ショップ） ============ */
+.panel-screen {
+  background: linear-gradient(#fdf6e9, #f3e9d7);
+  gap: 10px;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(760px, 96vw);
+  gap: 10px;
+}
+.panel-header h2 {
+  font-size: 24px;
+}
+.panel-body {
+  width: min(760px, 96vw);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 30px;
+}
+.status-card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.status-card:first-child {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+.status-player-info {
+  flex: 1;
+}
+.status-name {
+  font-size: 24px;
+  font-weight: bold;
+}
+.status-grade-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 15px;
+  color: #8a7767;
+}
+.status-coins {
+  font-size: 20px;
+  font-weight: bold;
+}
+.status-row-label {
+  font-weight: bold;
+  font-size: 17px;
+}
+.status-sub {
+  font-size: 14px;
+  color: #8a7767;
+}
+.subject-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.subject-name {
+  width: 110px;
+  font-size: 15px;
+  font-weight: bold;
+}
+.subject-bar {
+  flex: 1;
+  height: 16px;
+  background: #efe6d8;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.subject-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s;
+}
+.subject-count {
+  font-size: 14px;
+  width: 52px;
+  text-align: right;
+}
+.pet-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.pet-emoji {
+  font-size: 40px;
+}
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.badge {
+  background: #f5efe4;
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  opacity: 0.65;
+}
+.badge.earned {
+  background: #fff9e0;
+  border: 2px solid #ffd54f;
+  opacity: 1;
+}
+.badge-icon {
+  font-size: 28px;
+}
+.badge-name {
+  font-weight: bold;
+  font-size: 14px;
+}
+.badge-desc {
+  font-size: 11px;
+  color: #8a7767;
+}
+
+/* ============ 建築 ============ */
+.palette-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  width: min(760px, 96vw);
+  padding: 6px 2px;
+  flex-shrink: 0;
+}
+.palette-btn {
+  background: #fff;
+  border: 3px solid #d8c9b8;
+  border-radius: 14px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 92px;
+  color: var(--brown);
+}
+.palette-btn.selected {
+  outline: 4px solid var(--orange);
+}
+.palette-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+}
+.palette-swatch.big {
+  width: 44px;
+  height: 44px;
+}
+.palette-name {
+  font-size: 12px;
+  font-weight: bold;
+}
+.palette-count {
+  font-size: 13px;
+}
+.build-grid {
+  display: grid;
+  gap: 3px;
+  background: #cbbfa8;
+  border-radius: 14px;
+  padding: 8px;
+  width: min(94vw, 60vh, 520px);
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+.build-cell {
+  background: #efe6d3;
+  border-radius: 6px;
+  font-size: clamp(10px, 2.6vw, 20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.build-cell.filled {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+.build-cell:active {
+  transform: scale(0.92);
+}
+
+/* ============ ショップ ============ */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.shop-item {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.shop-name {
+  font-weight: bold;
+  font-size: 15px;
+}
+.shop-owned {
+  font-size: 12px;
+  color: #8a7767;
+}
+.shop-pet-emoji {
+  font-size: 40px;
+}
+
+/* せまい画面ではHUDを小さく */
+@media (max-width: 560px) {
+  .hud-help {
+    display: none;
+  }
+  .hud-daily {
+    top: 74px;
+  }
+  .subject-name {
+    width: 86px;
+    font-size: 13px;
+  }
+}

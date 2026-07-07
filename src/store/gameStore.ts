@@ -1,0 +1,429 @@
+import { create } from 'zustand'
+import type {
+  Grade,
+  Question,
+  SaveData,
+  Screen,
+  Subject,
+  WorldNPC,
+} from '../types/game'
+import { getQuestions } from '../data/questions'
+import { SUBJECTS } from '../data/grades'
+import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, xpForLevel } from '../data/rewards'
+import {
+  createNewSave,
+  deleteSave,
+  loadSave,
+  writeSave,
+  todayString,
+  type SlotId,
+} from './saveSystem'
+
+/** 1クエスト＝3問のセッション */
+export interface QuestSession {
+  subject: Subject
+  questions: Question[]
+  index: number
+  /** いまの問題でまちがえた回数 */
+  wrong: number
+  /** 表示中のヒントレベル 0=なし 1=ヒント1 2=ヒント2 */
+  hintLevel: number
+  /** 2回まちがえたら、正解をひからせて一緒に解く */
+  assist: boolean
+  phase: 'ask' | 'correct' | 'done'
+  /** 直前の正解でもらった報酬 */
+  lastReward: { coins: number; xp: number; blockNames: string[] } | null
+  /** はげまし・フィードバックメッセージ */
+  message: string | null
+  levelUp: boolean
+  newBadges: string[]
+  /** このセッションで正解した数 */
+  clearedCount: number
+  /** セッション終了ボーナスのメッセージ */
+  bonusMessages: string[]
+}
+
+interface GameState {
+  screen: Screen
+  slot: SlotId | null
+  save: SaveData | null
+  /** いま近くにいるNPC（しらべるボタンの対象） */
+  nearby: WorldNPC | null
+  quest: QuestSession | null
+  /** 画面に一時的に出すメッセージ */
+  toast: { id: number; text: string } | null
+  /** 「はじめから」でスロットを選んだ直後か（名前入力→学年選択に進む用） */
+  isNewGame: boolean
+
+  setScreen: (s: Screen) => void
+  selectSlot: (slot: SlotId) => void
+  startNewOnSlot: (slot: SlotId) => void
+  deleteSlot: (slot: SlotId) => void
+  createSave: (name: string, avatar: number) => void
+  setGrade: (g: Grade) => void
+  setNearby: (npc: WorldNPC | null) => void
+  interact: () => void
+  startQuest: (subject: Subject) => void
+  answerQuestion: (choice: number) => void
+  showHint: () => void
+  questNext: () => void
+  closeQuest: () => void
+  placeBlock: (cell: number) => void
+  selectBuildBlock: (blockId: string | null) => void
+  buildSelection: string | null
+  buyBlock: (blockId: string) => void
+  buyPet: (petId: string) => void
+  showToast: (text: string) => void
+  backToTitle: () => void
+}
+
+let toastId = 0
+
+/** ストア内でセーブデータを変更して自動保存するヘルパー */
+function mutateSave(
+  get: () => GameState,
+  set: (p: Partial<GameState>) => void,
+  fn: (s: SaveData) => void,
+) {
+  const { save, slot } = get()
+  if (!save || !slot) return
+  const next = structuredClone(save)
+  fn(next)
+  writeSave(slot, next)
+  set({ save: next })
+}
+
+/** 経験値を加えてレベルアップ処理。レベルが上がったらtrue */
+function addXp(s: SaveData, amount: number): boolean {
+  s.xp += amount
+  let leveled = false
+  while (s.xp >= xpForLevel(s.level)) {
+    s.xp -= xpForLevel(s.level)
+    s.level += 1
+    leveled = true
+  }
+  return leveled
+}
+
+/** 新しく取れたバッジのIDを返す */
+function checkBadges(s: SaveData): string[] {
+  const earned: string[] = []
+  for (const b of BADGES) {
+    if (!s.badges.includes(b.id) && b.check(s)) {
+      s.badges.push(b.id)
+      earned.push(b.id)
+    }
+  }
+  return earned
+}
+
+/** 未クリア優先で、ランダムに3問えらぶ */
+function pickQuestions(save: SaveData, subject: Subject): Question[] {
+  const pool = getQuestions(save.grade, subject)
+  if (pool.length === 0) return []
+  const fresh = pool.filter((q) => !save.clearedQuests.includes(q.id))
+  const done = pool.filter((q) => save.clearedQuests.includes(q.id))
+  const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - 0.5)
+  return [...shuffle(fresh), ...shuffle(done)].slice(0, 3)
+}
+
+const ENCOURAGE_WRONG = [
+  'おしい！ もういちど やってみよう',
+  'だいじょうぶ！ ヒントを みてみよう',
+  'いいちょうせん！ こんどは いっしょに かんがえよう',
+]
+
+const PRAISE = ['よくできたね！🎉', 'すごい！ せいかい！✨', 'その ちょうし！🌟', 'ピンポーン！ だいせいかい！🎊']
+
+export const useGameStore = create<GameState>((set, get) => ({
+  screen: 'title',
+  slot: null,
+  save: null,
+  nearby: null,
+  quest: null,
+  toast: null,
+  isNewGame: false,
+  buildSelection: null,
+
+  setScreen: (s) => set({ screen: s }),
+
+  selectSlot: (slot) => {
+    const data = loadSave(slot)
+    if (data) {
+      writeSave(slot, data)
+      set({ slot, save: data, screen: 'world', isNewGame: false })
+    } else {
+      set({ slot, save: null, screen: 'name', isNewGame: true })
+    }
+  },
+
+  startNewOnSlot: (slot) => {
+    set({ slot, save: null, screen: 'name', isNewGame: true })
+  },
+
+  deleteSlot: (slot) => {
+    deleteSave(slot)
+    // 再描画のためにダミー更新
+    set({ toast: { id: ++toastId, text: 'データを けしました' } })
+  },
+
+  createSave: (name, avatar) => {
+    const { slot } = get()
+    if (!slot) return
+    const data = createNewSave(name || 'たんけんか', avatar)
+    writeSave(slot, data)
+    set({ save: data, screen: 'grade' })
+  },
+
+  setGrade: (g) => {
+    mutateSave(get, set, (s) => {
+      s.grade = g
+    })
+    set({ screen: 'world' })
+  },
+
+  setNearby: (npc) => {
+    if (get().nearby?.id !== npc?.id) set({ nearby: npc })
+  },
+
+  interact: () => {
+    const { nearby, save, quest } = get()
+    if (!nearby || !save || quest) return
+    switch (nearby.kind) {
+      case 'quest':
+        get().startQuest(nearby.subject!)
+        break
+      case 'shop':
+        set({ screen: 'shop' })
+        break
+      case 'build':
+        set({ screen: 'build' })
+        break
+      case 'sign':
+        get().showToast(nearby.message ?? '')
+        break
+      case 'chest': {
+        if (save.chestDate === todayString()) {
+          get().showToast('たからばこは あした また あくよ🔒')
+        } else {
+          mutateSave(get, set, (s) => {
+            s.chestDate = todayString()
+            s.coins += 10
+          })
+          get().showToast('たからばこを あけた！ +10コイン🪙')
+        }
+        break
+      }
+    }
+  },
+
+  startQuest: (subject) => {
+    const { save } = get()
+    if (!save) return
+    const questions = pickQuestions(save, subject)
+    if (questions.length === 0) {
+      get().showToast(
+        `${SUBJECTS[subject].name}の もんだいは ${save.grade}ねんせいでは じゅんびちゅう！ ほかの がくねんで あそんでみてね`,
+      )
+      return
+    }
+    set({
+      quest: {
+        subject,
+        questions,
+        index: 0,
+        wrong: 0,
+        hintLevel: 0,
+        assist: false,
+        phase: 'ask',
+        lastReward: null,
+        message: null,
+        levelUp: false,
+        newBadges: [],
+        clearedCount: 0,
+        bonusMessages: [],
+      },
+    })
+  },
+
+  answerQuestion: (choice) => {
+    const { quest, save } = get()
+    if (!quest || !save || quest.phase !== 'ask') return
+    const q = quest.questions[quest.index]
+    const correct = choice === q.answer
+
+    if (!correct) {
+      const wrong = quest.wrong + 1
+      set({
+        quest: {
+          ...quest,
+          wrong,
+          hintLevel: Math.min(wrong, 2),
+          assist: wrong >= 2,
+          message: ENCOURAGE_WRONG[Math.min(wrong - 1, ENCOURAGE_WRONG.length - 1)],
+        },
+      })
+      // まちがえても記録は「ちょうせんした」だけ。ペナルティなし
+      return
+    }
+
+    // ===== 正解！ =====
+    const firstTime = !save.clearedQuests.includes(q.id)
+    const coins = firstTime ? q.reward.coins : Math.max(1, Math.floor(q.reward.coins / 2))
+    const xp = q.reward.xp
+    let levelUp = false
+    let newBadges: string[] = []
+    const bonusMessages: string[] = []
+    const blockNames: string[] = []
+
+    mutateSave(get, set, (s) => {
+      s.coins += coins
+      levelUp = addXp(s, xp)
+      if (firstTime) {
+        s.clearedQuests.push(q.id)
+        if (q.reward.blocks) {
+          for (const [blockId, count] of Object.entries(q.reward.blocks)) {
+            s.blocks[blockId] = (s.blocks[blockId] ?? 0) + count
+            blockNames.push(blockId)
+          }
+        }
+      }
+      s.stats.answered += 1
+      s.stats.correct += 1
+      const sub = (s.stats.bySubject[q.subject] ??= { answered: 0, cleared: 0 })
+      sub.answered += 1
+      if (firstTime) sub.cleared += 1
+      if (s.pet) s.pet.growth += 1
+
+      // きょうのクリア数ボーナス
+      s.dailyCount += 1
+      if (s.dailyCount === DAILY_BONUS.small.at) {
+        s.coins += DAILY_BONUS.small.coins
+        bonusMessages.push(DAILY_BONUS.small.message)
+      }
+      if (s.dailyCount === DAILY_BONUS.big.at) {
+        s.coins += DAILY_BONUS.big.coins
+        bonusMessages.push(DAILY_BONUS.big.message)
+      }
+      newBadges = checkBadges(s)
+    })
+
+    set({
+      quest: {
+        ...quest,
+        phase: 'correct',
+        lastReward: { coins, xp, blockNames },
+        message: PRAISE[Math.floor(Math.random() * PRAISE.length)],
+        levelUp,
+        newBadges,
+        clearedCount: quest.clearedCount + 1,
+        bonusMessages,
+      },
+    })
+  },
+
+  showHint: () => {
+    const { quest } = get()
+    if (!quest || quest.phase !== 'ask') return
+    if (quest.hintLevel === 0) set({ quest: { ...quest, hintLevel: 1 } })
+  },
+
+  questNext: () => {
+    const { quest } = get()
+    if (!quest) return
+    if (quest.index + 1 >= quest.questions.length) {
+      set({ quest: { ...quest, phase: 'done' } })
+    } else {
+      set({
+        quest: {
+          ...quest,
+          index: quest.index + 1,
+          wrong: 0,
+          hintLevel: 0,
+          assist: false,
+          phase: 'ask',
+          lastReward: null,
+          message: null,
+          levelUp: false,
+          newBadges: [],
+          bonusMessages: [],
+        },
+      })
+    }
+  },
+
+  closeQuest: () => set({ quest: null }),
+
+  selectBuildBlock: (blockId) => set({ buildSelection: blockId }),
+
+  placeBlock: (cell) => {
+    const { save, buildSelection } = get()
+    if (!save) return
+    const current = save.buildGrid[cell]
+    if (current) {
+      // 置いてあるブロックをはずす（手もとに戻る）
+      mutateSave(get, set, (s) => {
+        s.blocks[current] = (s.blocks[current] ?? 0) + 1
+        s.buildGrid[cell] = null
+      })
+    } else if (buildSelection && (save.blocks[buildSelection] ?? 0) > 0) {
+      mutateSave(get, set, (s) => {
+        s.blocks[buildSelection] = (s.blocks[buildSelection] ?? 0) - 1
+        s.buildGrid[cell] = buildSelection
+        s.stats.blocksPlaced += 1
+        const earned = checkBadges(s)
+        if (earned.length > 0) {
+          setTimeout(() => get().showToast('あたらしい バッジを ゲット！🏅'), 100)
+        }
+      })
+    }
+  },
+
+  buyBlock: (blockId) => {
+    const { save } = get()
+    if (!save) return
+    const price = getBlockPrice(blockId)
+    if (price === null || save.coins < price) {
+      get().showToast('コインが たりないよ。クエストで ためよう！')
+      return
+    }
+    mutateSave(get, set, (s) => {
+      s.coins -= price
+      s.blocks[blockId] = (s.blocks[blockId] ?? 0) + 1
+      checkBadges(s)
+    })
+    get().showToast('かった！ けんちくエリアで つかってみよう🧱')
+  },
+
+  buyPet: (petId) => {
+    const { save } = get()
+    if (!save) return
+    if (save.pet) {
+      get().showToast('もう ペットが いるよ🐾 だいじに そだてよう！')
+      return
+    }
+    const pet = PET_MAP[petId]
+    if (!pet || save.coins < pet.price) {
+      get().showToast('コインが たりないよ。クエストで ためよう！')
+      return
+    }
+    mutateSave(get, set, (s) => {
+      s.coins -= pet.price
+      s.pet = { type: petId, growth: 0 }
+      checkBadges(s)
+    })
+    get().showToast(`${pet.name}が なかまに なった！${pet.emoji}`)
+  },
+
+  showToast: (text) => {
+    set({ toast: { id: ++toastId, text } })
+  },
+
+  backToTitle: () => {
+    set({ screen: 'title', slot: null, save: null, quest: null, nearby: null })
+  },
+}))
+
+function getBlockPrice(blockId: string): number | null {
+  return BLOCK_MAP[blockId]?.price ?? null
+}
