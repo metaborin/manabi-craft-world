@@ -2,17 +2,20 @@ import type { BadgeDef, BlockDef, PetDef, SaveData } from '../types/game'
 
 /** 建築に使えるブロックの種類 */
 export const BLOCKS: BlockDef[] = [
-  { id: 'grass', name: 'くさブロック', color: '#6abe30', emoji: '🟩', price: 5 },
-  { id: 'dirt', name: 'つちブロック', color: '#a0713c', emoji: '🟫', price: 5 },
-  { id: 'wood', name: 'きのブロック', color: '#c98f4e', emoji: '🪵', price: 8 },
-  { id: 'stone', name: 'いしブロック', color: '#9aa0a6', emoji: '🪨', price: 8 },
-  { id: 'brick', name: 'れんがブロック', color: '#d95f3b', emoji: '🧱', price: 10 },
-  { id: 'sand', name: 'すなブロック', color: '#f0d98c', emoji: '🏖️', price: 8 },
-  { id: 'water', name: 'みずブロック', color: '#5ec8f2', emoji: '💧', price: 10 },
-  { id: 'glass', name: 'ガラスブロック', color: '#cfeef7', emoji: '🧊', price: 12 },
-  { id: 'flower', name: 'はなブロック', color: '#ff7eb3', emoji: '🌸', price: 12 },
-  { id: 'star', name: 'ほしブロック', color: '#ffd54f', emoji: '⭐', price: 20 },
-  { id: 'gem', name: 'ほうせきブロック', color: '#b388ff', emoji: '💎', price: 25 },
+  { id: 'grass', name: 'くさブロック', color: '#6abe30', emoji: '🟩', price: 5, category: 'block', inShop: true },
+  { id: 'dirt', name: 'つちブロック', color: '#a0713c', emoji: '🟫', price: 5, category: 'block', inShop: true },
+  { id: 'wood', name: 'きのブロック', color: '#c98f4e', emoji: '🪵', price: 8, category: 'block', inShop: true },
+  { id: 'stone', name: 'いしブロック', color: '#9aa0a6', emoji: '🪨', price: 8, category: 'block', inShop: true },
+  { id: 'brick', name: 'れんがブロック', color: '#d95f3b', emoji: '🧱', price: 10, category: 'block', inShop: true },
+  { id: 'sand', name: 'すなブロック', color: '#f0d98c', emoji: '🏖️', price: 8, category: 'block', inShop: true },
+  { id: 'water', name: 'みずブロック', color: '#5ec8f2', emoji: '💧', price: 10, category: 'block', inShop: true },
+  { id: 'glass', name: 'ガラスブロック', color: '#cfeef7', emoji: '🧊', price: 12, category: 'deco', inShop: true },
+  { id: 'flower', name: 'はなブロック', color: '#ff7eb3', emoji: '🌸', price: 12, category: 'deco', inShop: true },
+  { id: 'star', name: 'ほしブロック', color: '#ffd54f', emoji: '⭐', price: 20, category: 'deco', inShop: true },
+  { id: 'gem', name: 'ほうせきブロック', color: '#b388ff', emoji: '💎', price: 25, category: 'deco', inShop: true },
+  // ↓ ショップでは買えない。たからばこ・クエストで手に入るレアブロック
+  { id: 'gold', name: 'きんのブロック', color: '#f5c518', emoji: '🥇', price: 40, category: 'deco', inShop: false },
+  { id: 'bookshelf', name: 'ほんだなブロック', color: '#8d6248', emoji: '📚', price: 30, category: 'deco', inShop: false },
 ]
 
 export const BLOCK_MAP: Record<string, BlockDef> = Object.fromEntries(
@@ -115,6 +118,20 @@ export const BADGES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
     desc: 'ペットが なかまになった',
     icon: '🐾',
     check: (s) => s.pet !== null,
+  },
+  {
+    id: 'chest-1',
+    name: 'たからばこ はっけん',
+    desc: 'かくされた たからばこを あけた',
+    icon: '🎁',
+    check: (s) => (s.openedChests?.length ?? 0) >= 1,
+  },
+  {
+    id: 'chest-all',
+    name: 'たからばこハンター',
+    desc: 'たからばこを 5こ ぜんぶ あけた',
+    icon: '🗝️',
+    check: (s) => (s.openedChests?.length ?? 0) >= 5,
   },
 ]
 

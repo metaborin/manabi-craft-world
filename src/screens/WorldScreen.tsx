@@ -6,6 +6,8 @@ import { TouchControls, InteractButton } from '../components/TouchControls'
 import { Hud } from '../components/Hud'
 import { TutorialGuide } from '../components/TutorialGuide'
 import { Toast } from '../components/Toast'
+import { DialogBox } from '../components/DialogBox'
+import { FxOverlay } from '../components/FxOverlay'
 import { QuestModal } from './QuestModal'
 import { UI } from '../data/uiText'
 
@@ -16,7 +18,17 @@ export function WorldScreen() {
   const dragRef = useRef<{ id: number; x: number } | null>(null)
 
   useEffect(() => {
-    return attachKeyboard(() => useGameStore.getState().interact())
+    // E/Enterキー：会話中はセリフ送り、それ以外は「しらべる」
+    return attachKeyboard(() => {
+      const state = useGameStore.getState()
+      if (state.dialog) {
+        const lines = state.dialog.npc.dialog ?? []
+        if (state.dialog.index < lines.length - 1) state.dialogNext()
+        // 最後の行はボタン（ちょうせんする／わかった）で選ばせる
+      } else {
+        state.interact()
+      }
+    })
   }, [])
 
   if (!save) return null
@@ -54,6 +66,8 @@ export function WorldScreen() {
 
       {/* タッチボタンを出すときは中央のピルは出さない（右下にしらべるボタンがある） */}
       {showTouchControls ? <TouchControls /> : <InteractButton />}
+      <DialogBox />
+      <FxOverlay />
       <Toast />
       {quest && <QuestModal />}
     </div>

@@ -1,4 +1,4 @@
-import type { WorldNPC } from '../types/game'
+import type { TreasureReward, WorldNPC } from '../types/game'
 
 /** ワールドの広さ（-WORLD_HALF 〜 +WORLD_HALF） */
 export const WORLD_HALF = 22
@@ -14,6 +14,11 @@ export const WORLD_NPCS: WorldNPC[] = [
     kind: 'quest',
     subject: 'sansu',
     label: 'カズくん',
+    dialog: [
+      'こんにちは！ ここは さんすうのおか だよ。',
+      'かずの ちからで この おかの とうを たてたんだ！',
+      'かんたんな もんだいに ちょうせんしてみる？',
+    ],
     pos: [14, 0, -10],
     color: '#f59e42',
   },
@@ -22,6 +27,11 @@ export const WORLD_NPCS: WorldNPC[] = [
     kind: 'quest',
     subject: 'kokugo',
     label: 'ふでちゃん',
+    dialog: [
+      'ようこそ〜。ここは ことばのもり だよ。',
+      'おおきな ほんと えんぴつが めじるしなの。',
+      'ことばの もんだい、いっしょに やってみよう！',
+    ],
     pos: [-14, 0, -10],
     color: '#4cb944',
   },
@@ -30,6 +40,11 @@ export const WORLD_NPCS: WorldNPC[] = [
     kind: 'quest',
     subject: 'seikatsu',
     label: 'はなさん',
+    dialog: [
+      'こんにちは！ わたしは はなさん。',
+      'おはなや いきものの こと、どれくらい しってるかな？',
+      'せいかつの もんだいに ちょうせんしてみる？',
+    ],
     pos: [-4, 0, -14],
     color: '#f06292',
   },
@@ -38,6 +53,11 @@ export const WORLD_NPCS: WorldNPC[] = [
     kind: 'quest',
     subject: 'rika',
     label: 'いけのはかせ',
+    dialog: [
+      'わしは いけのはかせ じゃ。',
+      'この いけには ふしぎが いっぱい あるんじゃよ。',
+      'りかの もんだいに ちょうせんして みるかの？',
+    ],
     pos: [4, 0, -16],
     color: '#26c6da',
   },
@@ -46,6 +66,11 @@ export const WORLD_NPCS: WorldNPC[] = [
     kind: 'quest',
     subject: 'shakai',
     label: 'まちこさん',
+    dialog: [
+      'いらっしゃい！ ここは ちいさな まち よ。',
+      'ちずや まちの こと、おしえてあげるわ。',
+      'しゃかいの もんだいに ちょうせんしてみる？',
+    ],
     pos: [18, 0, 2],
     color: '#a1887f',
   },
@@ -54,6 +79,11 @@ export const WORLD_NPCS: WorldNPC[] = [
     kind: 'quest',
     subject: 'eigo',
     label: 'ミナトせんちょう',
+    dialog: [
+      'Ahoy（アホーイ）！ ようこそ えいごのみなと へ！',
+      'ふねに のって せかいじゅうを たびしてきたぞ。',
+      'えいごの もんだいに チャレンジ してみるか？',
+    ],
     pos: [-18, 0, 2],
     color: '#9575cd',
   },
@@ -74,7 +104,7 @@ export const WORLD_NPCS: WorldNPC[] = [
   {
     id: 'chest-daily',
     kind: 'chest',
-    label: 'たからばこ',
+    label: 'まいにちボックス',
     pos: [0, 0, -6],
     color: '#e8b93e',
   },
@@ -82,8 +112,11 @@ export const WORLD_NPCS: WorldNPC[] = [
     id: 'sign-welcome',
     kind: 'sign',
     label: 'かんばん',
-    message:
-      'まなびクラフトワールドへ ようこそ！ せんせいたちに はなしかけて クエストに チャレンジしよう🌟',
+    dialog: [
+      'まなびクラフトワールドへ ようこそ！',
+      'せんせいたちに はなしかけて クエストに チャレンジしよう🌟',
+      'ワールドの どこかに たからばこも かくれているよ…！',
+    ],
     pos: [0, 0, 3],
     color: '#b58a5a',
   },
@@ -91,9 +124,66 @@ export const WORLD_NPCS: WorldNPC[] = [
     id: 'sign-build',
     kind: 'sign',
     label: 'けんちくエリア',
-    message:
-      'ここは けんちくエリア！ クエストで もらった ブロックで じゆうに つくってみよう🏠',
+    dialog: [
+      'ここは けんちくエリア！',
+      'クエストで もらった ブロックで じゆうに つくってみよう🏠',
+    ],
     pos: [-1.5, 0, 9],
     color: '#b58a5a',
   },
+  // ============================================================
+  // たんけんで見つける たからばこ（1回だけ開けられる）
+  // ============================================================
+  {
+    id: 'treasure-forest',
+    kind: 'treasure',
+    label: 'たからばこ',
+    pos: [-19, 0, -16],
+    color: '#c0392b',
+  },
+  {
+    id: 'treasure-hill',
+    kind: 'treasure',
+    label: 'たからばこ',
+    pos: [19, 0, -15],
+    color: '#c0392b',
+  },
+  {
+    id: 'treasure-port',
+    kind: 'treasure',
+    label: 'たからばこ',
+    pos: [-21, 0, 8],
+    color: '#c0392b',
+  },
+  {
+    id: 'treasure-flower',
+    kind: 'treasure',
+    label: 'たからばこ',
+    pos: [-15, 0, 18],
+    color: '#c0392b',
+  },
+  {
+    id: 'treasure-pond',
+    kind: 'treasure',
+    label: 'たからばこ',
+    pos: [12, 0, -19],
+    color: '#c0392b',
+  },
 ]
+
+/** たからばこの中身（IDはWORLD_NPCSのtreasure-*と対応） */
+export const TREASURE_REWARDS: Record<string, TreasureReward> = {
+  'treasure-forest': { coins: 10, blocks: { bookshelf: 1 } },
+  'treasure-hill': { coins: 10, blocks: { gold: 2 } },
+  'treasure-port': { coins: 15, blocks: { glass: 2 } },
+  'treasure-flower': { coins: 5, blocks: { flower: 3 } },
+  'treasure-pond': { coins: 10, blocks: { gem: 1 } },
+}
+
+/** たからばこの総数（図鑑・ステータス表示用） */
+export const TREASURE_COUNT = Object.keys(TREASURE_REWARDS).length
+
+/** 図鑑に載せるキャラクターNPC（quest/shop/build） */
+export const CHARACTER_NPCS = WORLD_NPCS.filter(
+  (n) => n.kind === 'quest' || n.kind === 'shop' || n.kind === 'build',
+)

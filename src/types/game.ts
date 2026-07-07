@@ -52,6 +52,10 @@ export interface BlockDef {
   emoji: string
   /** ショップでの値段（コイン） */
   price: number
+  /** ショップのカテゴリ（block=ブロック / deco=かざり） */
+  category: 'block' | 'deco'
+  /** falseならショップに並ばない（宝箱やクエストで手に入る） */
+  inShop: boolean
 }
 
 export interface PetDef {
@@ -116,6 +120,10 @@ export interface SaveData {
   tutorialStep: number
   /** チュートリアルが終わったか */
   tutorialDone: boolean
+  /** 開けた たからばこ のID（一度きりの宝箱） */
+  openedChests: string[]
+  /** 話しかけたことのあるNPCのID（図鑑用） */
+  metNPCs: string[]
 }
 
 /** 端末ごとの設定（セーブとは別にlocalStorageへ保存） */
@@ -139,15 +147,24 @@ export type Screen =
   | 'build'
   | 'shop'
   | 'settings'
+  | 'zukan'
 
 /** ワールド内で話しかけられるもの（NPC・看板・宝箱など） */
 export interface WorldNPC {
   id: string
-  kind: 'quest' | 'shop' | 'build' | 'sign' | 'chest'
+  kind: 'quest' | 'shop' | 'build' | 'sign' | 'chest' | 'treasure'
   subject?: Subject
   label: string
   /** 話しかけたときのセリフ（sign用） */
   message?: string
+  /** 会話ウィンドウで1行ずつ表示するセリフ */
+  dialog?: string[]
   pos: [number, number, number]
   color: string
+}
+
+/** たからばこの中身 */
+export interface TreasureReward {
+  coins?: number
+  blocks?: Record<string, number>
 }

@@ -34,6 +34,8 @@ export function createNewSave(name: string, avatar: number): SaveData {
     chestDate: '',
     tutorialStep: 0,
     tutorialDone: false,
+    openedChests: [],
+    metNPCs: [],
   }
 }
 
@@ -55,6 +57,9 @@ export function loadSave(slot: SlotId): SaveData | null {
       data.tutorialDone = data.stats.answered > 0
       data.tutorialStep = data.tutorialDone ? 6 : 0
     }
+    // フェーズ2.5で追加された項目を補完する
+    data.openedChests ??= []
+    data.metNPCs ??= []
     return data
   } catch {
     return null

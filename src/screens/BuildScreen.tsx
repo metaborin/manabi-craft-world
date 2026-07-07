@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { BLOCKS, BLOCK_MAP } from '../data/rewards'
 import { BUILD_GRID_SIZE } from '../data/world'
@@ -13,7 +14,16 @@ export function BuildScreen() {
   const placeBlock = useGameStore((s) => s.placeBlock)
   const selection = useGameStore((s) => s.buildSelection)
   const selectBuildBlock = useGameStore((s) => s.selectBuildBlock)
+  /** ブロックを置く／はずすたびに「ほぞんしたよ」を出す */
+  const [savedAt, setSavedAt] = useState(0)
   if (!save) return null
+
+  const handleCell = (i: number) => {
+    const before = save.buildGrid[i]
+    const canChange = before !== null || (selection && (save.blocks[selection] ?? 0) > 0)
+    placeBlock(i)
+    if (canChange) setSavedAt(Date.now())
+  }
 
   const selectedDef = selection ? BLOCK_MAP[selection] : null
   const canPlace = selection !== null && (save.blocks[selection] ?? 0) > 0
@@ -25,8 +35,15 @@ export function BuildScreen() {
           ◀ {UI.common.backToWorld}
         </button>
         <h2>{UI.build.heading}</h2>
-        <div className="hud-coins coin-bump" key={save.coins}>
-          🪙 {save.coins}
+        <div className="panel-header-right">
+          {savedAt > 0 && (
+            <span className="saved-chip" key={savedAt}>
+              {UI.build.saved}
+            </span>
+          )}
+          <div className="hud-coins coin-bump" key={`c${save.coins}`}>
+            🪙 {save.coins}
+          </div>
         </div>
       </div>
 
@@ -74,7 +91,7 @@ export function BuildScreen() {
             key={i}
             className={`build-cell ${cell ? 'filled' : ''}`}
             style={cell ? { background: BLOCK_MAP[cell]?.color } : undefined}
-            onClick={() => placeBlock(i)}
+            onClick={() => handleCell(i)}
           >
             {cell ? BLOCK_MAP[cell]?.emoji : ''}
           </button>

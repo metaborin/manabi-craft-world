@@ -5,8 +5,27 @@ import { useGameStore } from '../store/gameStore'
 import { WORLD_HALF, WORLD_NPCS, BUILD_GRID_SIZE, BUILD_ORIGIN } from '../data/world'
 import { BLOCK_MAP } from '../data/rewards'
 import { GRADES } from '../data/grades'
+import { todayString } from '../store/saveSystem'
 import { TextSprite } from './TextSprite'
 import { Player } from './Player'
+import {
+  Tree,
+  SakuraTree,
+  PineTree,
+  Windmill,
+  Fountain,
+  Bridge,
+  NumberTower,
+  NumberStairs,
+  GiantBook,
+  GiantPencil,
+  Workbench,
+  BlockPile,
+  Crane,
+  ShopStall,
+  SmallHouse,
+  Lamp,
+} from './decor'
 import type { WorldNPC } from '../types/game'
 
 // ---------------------------------------------------------------
@@ -57,6 +76,8 @@ function tileColor(x: number, z: number): string {
   }
   // りかのいけ（水）
   if (dist(x, z, 8, -17) < 3.2) return checker ? '#5ec8f2' : '#54bcE8'
+  // 川（いけから みなみへ ながれる）
+  if (x >= 10 && x <= 11 && z >= -15) return checker ? '#5ec8f2' : '#54bcE8'
   // はじまり広場（石だたみ）
   if (dist(x, z, 0, 0) < 4.5) return checker ? '#cfc8bb' : '#c2bab0'
   // みち（十字）
@@ -69,12 +90,16 @@ function tileColor(x: number, z: number): string {
   if (dist(x, z, 18, 2) < 4) return checker ? '#b8aa9a' : '#ab9e8f'
   // えいごのみなと（すなはま）
   if (dist(x, z, -18, 2) < 4) return checker ? '#f0d98c' : '#e5cd7f'
+  // はなばたけ（あかるい草）
+  if (dist(x, z, -15, 17) < 3.5) return checker ? '#93d465' : '#89c95c'
+  // ショップまえ（れんがみち）
+  if (dist(x, z, 8, 10) < 2.6) return checker ? '#d9b295' : '#cfa78a'
   // ふつうの草原
   return checker ? '#7cc44f' : '#73b849'
 }
 
 // ---------------------------------------------------------------
-// 飾り（木・花・岩など）
+// 飾り（木・花・ランドマーク）
 // ---------------------------------------------------------------
 function mulberry32(seed: number) {
   return () => {
@@ -86,71 +111,92 @@ function mulberry32(seed: number) {
   }
 }
 
-function Tree({ position }: { position: [number, number, number] }) {
-  return (
-    <group position={position}>
-      <mesh position={[0, 0.7, 0]}>
-        <boxGeometry args={[0.45, 1.4, 0.45]} />
-        <meshLambertMaterial color="#8a5a33" />
-      </mesh>
-      <mesh position={[0, 1.8, 0]}>
-        <boxGeometry args={[1.5, 1.1, 1.5]} />
-        <meshLambertMaterial color="#3f8f3a" />
-      </mesh>
-      <mesh position={[0, 2.6, 0]}>
-        <boxGeometry args={[0.9, 0.7, 0.9]} />
-        <meshLambertMaterial color="#4aa344" />
-      </mesh>
-    </group>
-  )
-}
-
 function Decorations() {
-  const items = useMemo(() => {
+  const flowers = useMemo(() => {
     const rand = mulberry32(42)
-    const flowers: { pos: [number, number, number]; color: string }[] = []
-    const flowerColors = ['#ff7eb3', '#ffd54f', '#ffffff', '#9575cd']
-    for (let i = 0; i < 30; i++) {
+    const items: { pos: [number, number, number]; color: string }[] = []
+    const colors = ['#ff7eb3', '#ffd54f', '#ffffff', '#9575cd']
+    // 野原にちらほら
+    for (let i = 0; i < 26; i++) {
       const x = (rand() - 0.5) * (WORLD_HALF * 2 - 4)
       const z = (rand() - 0.5) * (WORLD_HALF * 2 - 4)
-      // 広場・池・建築エリアの上には生やさない
       if (dist(x, z, 0, 0) < 5 || dist(x, z, 8, -17) < 4) continue
+      if (x >= 9 && x <= 12 && z >= -15) continue // 川
       const [bx, bz] = BUILD_ORIGIN
       if (x > bx - 1 && x < bx + BUILD_GRID_SIZE && z > bz - 1 && z < bz + BUILD_GRID_SIZE) continue
-      flowers.push({
-        pos: [x, 0.15, z],
-        color: flowerColors[Math.floor(rand() * flowerColors.length)],
+      items.push({ pos: [x, 0.15, z], color: colors[Math.floor(rand() * colors.length)] })
+    }
+    // はなばたけ（みっしり）
+    for (let i = 0; i < 40; i++) {
+      const a = rand() * Math.PI * 2
+      const r = rand() * 3
+      items.push({
+        pos: [-15 + Math.cos(a) * r, 0.15, 17 + Math.sin(a) * r],
+        color: colors[Math.floor(rand() * colors.length)],
       })
     }
-    return flowers
+    return items
   }, [])
-
-  const trees: [number, number, number][] = [
-    // こくごのもり
-    [-17, 0, -13], [-11, 0, -13], [-17, 0, -7], [-11, 0, -7], [-14, 0, -15],
-    // そのほかに ちらほら
-    [19, 0, -16], [12, 0, 16], [-19, 0, 16], [20, 0, 8], [-6, 0, -19],
-  ]
 
   return (
     <group>
-      {trees.map((p, i) => (
-        <Tree key={i} position={p} />
-      ))}
-      {items.map((f, i) => (
+      {/* ---- 木々 ---- */}
+      {/* こくごのもり */}
+      <Tree position={[-17, 0, -13]} />
+      <Tree position={[-11, 0, -13]} />
+      <Tree position={[-17, 0, -7]} />
+      <Tree position={[-14, 0, -15]} />
+      <SakuraTree position={[-11, 0, -7]} />
+      {/* そのほか */}
+      <Tree position={[12, 0, 16]} />
+      <Tree position={[-19, 0, 13]} />
+      <PineTree position={[19, 0, -19]} />
+      <PineTree position={[16, 0, -17]} />
+      <PineTree position={[-6, 0, -19]} />
+      <SakuraTree position={[4, 0, 6]} />
+      <SakuraTree position={[-4, 0, 20]} />
+      <Tree position={[20, 0, 8]} />
+
+      {/* ---- はな ---- */}
+      {flowers.map((f, i) => (
         <mesh key={i} position={f.pos}>
           <boxGeometry args={[0.22, 0.3, 0.22]} />
           <meshLambertMaterial color={f.color} />
         </mesh>
       ))}
-      {/* さんすうのおかの かずブロック */}
-      {[0, 1, 2].map((i) => (
-        <mesh key={`num${i}`} position={[12 + i * 1.4, 0.45 + i * 0.25, -13]}>
-          <boxGeometry args={[0.9, 0.9 + i * 0.5, 0.9]} />
-          <meshLambertMaterial color={['#ffd54f', '#f59e42', '#e8743b'][i]} />
-        </mesh>
-      ))}
-      {/* えいごのみなとの ふね */}
+
+      {/* ---- ランドマーク ---- */}
+      {/* はじまり広場：ふんすい＋がいとう */}
+      <Fountain position={[2.5, 0, -2.5]} />
+      <Lamp position={[-3.5, 0, -3.5]} />
+      <Lamp position={[3.5, 0, 3.5]} />
+      <Lamp position={[-3.5, 0, 3.5]} />
+
+      {/* さんすうのおか：かずのとう＋かいだん＋ふうしゃ */}
+      <NumberTower position={[17, 0, -13]} />
+      <NumberStairs position={[10.5, 0, -12]} />
+      <Windmill position={[20, 0, -11]} />
+
+      {/* こくごのもり：おおきな本＋えんぴつ */}
+      <GiantBook position={[-12, 0, -13]} rotation={0.4} />
+      <GiantPencil position={[-17, 0, -10]} rotation={1.1} />
+
+      {/* 川と橋 */}
+      <Bridge position={[10.5, 0, 0]} />
+
+      {/* けんちくエリア：さぎょうだい＋ブロックおきば＋クレーン */}
+      <Workbench position={[-6.5, 0, 10.5]} />
+      <BlockPile position={[6, 0, 12]} />
+      <Crane position={[7.5, 0, 16]} />
+
+      {/* ショップ：やたい */}
+      <ShopStall position={[9.5, 0, 11.5]} rotation={Math.PI + 0.5} />
+
+      {/* しゃかいのまち：いえ2けん */}
+      <SmallHouse position={[19, 0, -1]} />
+      <SmallHouse position={[16, 0, 5]} rotation={0.6} wall="#d8e4ea" roof="#5c6bc0" />
+
+      {/* えいごのみなと：ふね */}
       <group position={[-19.5, 0, 5.5]}>
         <mesh position={[0, 0.4, 0]}>
           <boxGeometry args={[1.4, 0.7, 2.6]} />
@@ -165,25 +211,16 @@ function Decorations() {
           <meshLambertMaterial color="#ffffff" />
         </mesh>
       </group>
-      {/* しゃかいのまちの いえ */}
-      <group position={[19, 0, -1]}>
-        <mesh position={[0, 0.8, 0]}>
-          <boxGeometry args={[1.8, 1.6, 1.8]} />
-          <meshLambertMaterial color="#e5d5bd" />
-        </mesh>
-        <mesh position={[0, 1.9, 0]}>
-          <boxGeometry args={[2.1, 0.6, 2.1]} />
-          <meshLambertMaterial color="#d95f3b" />
-        </mesh>
-      </group>
-      {/* エリアのなまえ */}
-      <TextSprite text="🔢 さんすうのおか" position={[14, 3.2, -10]} scale={1.5} bg="rgba(255,244,222,0.95)" />
-      <TextSprite text="📖 こくごのもり" position={[-14, 3.2, -10]} scale={1.5} bg="rgba(230,246,228,0.95)" />
+
+      {/* ---- エリアのなまえ ---- */}
+      <TextSprite text="🔢 さんすうのおか" position={[14, 3.4, -10]} scale={1.5} bg="rgba(255,244,222,0.95)" />
+      <TextSprite text="📖 こくごのもり" position={[-14, 3.4, -10]} scale={1.5} bg="rgba(230,246,228,0.95)" />
       <TextSprite text="🔬 りかのいけ" position={[7, 3.2, -16]} scale={1.4} bg="rgba(223,244,248,0.95)" />
-      <TextSprite text="🗾 しゃかいのまち" position={[18, 3.2, 2]} scale={1.4} bg="rgba(240,235,228,0.95)" />
+      <TextSprite text="🗾 しゃかいのまち" position={[18, 3.4, 2]} scale={1.4} bg="rgba(240,235,228,0.95)" />
       <TextSprite text="🌍 えいごのみなと" position={[-18, 3.2, 2]} scale={1.4} bg="rgba(236,231,246,0.95)" />
       <TextSprite text="🏠 けんちくエリア" position={[0.5, 3.2, 16]} scale={1.5} bg="rgba(250,240,224,0.95)" />
-      <TextSprite text="⛲ はじまりひろば" position={[0, 4, 0]} scale={1.5} />
+      <TextSprite text="🌼 はなばたけ" position={[-15, 2.6, 17]} scale={1.2} bg="rgba(240,251,232,0.95)" />
+      <TextSprite text="⛲ はじまりひろば" position={[0, 4.2, 0]} scale={1.5} />
     </group>
   )
 }
@@ -208,17 +245,19 @@ function NPCFigure({ npc }: { npc: WorldNPC }) {
 
   // 広場の方を向かせる
   const face = Math.atan2(-npc.pos[0], -npc.pos[2])
+  const emissive = isNear ? '#4a3800' : '#000000'
+  const scale = isNear ? 1.07 : 1
 
   if (npc.kind === 'sign') {
     return (
-      <group position={npc.pos} rotation={[0, face, 0]}>
+      <group position={npc.pos} rotation={[0, face, 0]} scale={scale}>
         <mesh position={[0, 0.5, 0]}>
           <boxGeometry args={[0.15, 1, 0.15]} />
           <meshLambertMaterial color="#8a5a33" />
         </mesh>
         <mesh position={[0, 1.15, 0]}>
           <boxGeometry args={[1.3, 0.75, 0.12]} />
-          <meshLambertMaterial color={npc.color} />
+          <meshLambertMaterial color={npc.color} emissive={emissive} />
         </mesh>
         <TextSprite text={`📌 ${npc.label}`} position={[0, 1.95, 0]} scale={0.9} />
         {isNear && <NearRing />}
@@ -226,39 +265,22 @@ function NPCFigure({ npc }: { npc: WorldNPC }) {
     )
   }
 
-  if (npc.kind === 'chest') {
-    return (
-      <group position={npc.pos}>
-        <mesh position={[0, 0.3, 0]}>
-          <boxGeometry args={[0.9, 0.6, 0.65]} />
-          <meshLambertMaterial color="#b5813a" />
-        </mesh>
-        <mesh position={[0, 0.66, 0]}>
-          <boxGeometry args={[0.95, 0.18, 0.7]} />
-          <meshLambertMaterial color={npc.color} />
-        </mesh>
-        <mesh position={[0, 0.45, 0.34]}>
-          <boxGeometry args={[0.16, 0.2, 0.06]} />
-          <meshLambertMaterial color="#ffe082" />
-        </mesh>
-        <TextSprite text="🎁 たからばこ" position={[0, 1.5, 0]} scale={0.9} />
-        {isNear && <NearRing />}
-      </group>
-    )
+  if (npc.kind === 'chest' || npc.kind === 'treasure') {
+    return <ChestFigure npc={npc} isNear={isNear} />
   }
 
   return (
-    <group position={npc.pos}>
+    <group position={npc.pos} scale={scale}>
       <group ref={group} rotation={[0, face, 0]}>
         {/* からだ */}
         <mesh position={[0, 0.45, 0]}>
           <boxGeometry args={[0.72, 0.9, 0.5]} />
-          <meshLambertMaterial color={npc.color} />
+          <meshLambertMaterial color={npc.color} emissive={emissive} />
         </mesh>
         {/* あたま */}
         <mesh position={[0, 1.25, 0]}>
           <boxGeometry args={[0.62, 0.62, 0.58]} />
-          <meshLambertMaterial color={lightColor} />
+          <meshLambertMaterial color={lightColor} emissive={emissive} />
         </mesh>
         {/* め */}
         <mesh position={[-0.14, 1.3, 0.3]}>
@@ -270,7 +292,70 @@ function NPCFigure({ npc }: { npc: WorldNPC }) {
           <meshBasicMaterial color="#3a3a3a" />
         </mesh>
       </group>
-      <TextSprite text={npc.label} position={[0, 2.15, 0]} scale={1.0} />
+      {/* ちかづくと 吹き出しが出る */}
+      {isNear ? (
+        <TextSprite text={`💬 ${npc.label}`} position={[0, 2.2, 0]} scale={1.05} bg="rgba(255,249,224,0.97)" />
+      ) : (
+        <TextSprite text={npc.label} position={[0, 2.15, 0]} scale={1.0} />
+      )}
+      {isNear && <NearRing />}
+    </group>
+  )
+}
+
+/** 宝箱（まいにちボックス＆たんけんのたからばこ） */
+function ChestFigure({ npc, isNear }: { npc: WorldNPC; isNear: boolean }) {
+  const sparkle = useRef<THREE.Group>(null!)
+  const isTreasure = npc.kind === 'treasure'
+  const opened = useGameStore((s) => {
+    if (!s.save) return false
+    return isTreasure
+      ? s.save.openedChests.includes(npc.id)
+      : s.save.chestDate === todayString()
+  })
+
+  useFrame(({ clock }) => {
+    if (sparkle.current) {
+      sparkle.current.position.y = 1.35 + Math.sin(clock.elapsedTime * 3) * 0.15
+    }
+  })
+
+  const bodyColor = opened ? '#8a6a4a' : isTreasure ? '#a8442f' : '#b5813a'
+  const lidColor = opened ? '#75593d' : isTreasure ? '#c0392b' : '#e8b93e'
+
+  return (
+    <group position={npc.pos} scale={isNear ? 1.07 : 1}>
+      {/* どうたい */}
+      <mesh position={[0, 0.3, 0]}>
+        <boxGeometry args={[0.9, 0.6, 0.65]} />
+        <meshLambertMaterial color={bodyColor} emissive={isNear ? '#3a2a00' : '#000000'} />
+      </mesh>
+      {/* ふた（あけると うしろに ひらく） */}
+      <group position={[0, 0.6, -0.32]} rotation={[opened ? -2.0 : 0, 0, 0]}>
+        <mesh position={[0, 0.09, 0.35]}>
+          <boxGeometry args={[0.95, 0.18, 0.7]} />
+          <meshLambertMaterial color={lidColor} />
+        </mesh>
+      </group>
+      {/* かなぐ */}
+      <mesh position={[0, 0.45, 0.34]}>
+        <boxGeometry args={[0.16, 0.2, 0.06]} />
+        <meshLambertMaterial color="#ffe082" />
+      </mesh>
+      {/* あいているときは 中がきらり */}
+      {opened && (
+        <mesh position={[0, 0.55, 0]}>
+          <boxGeometry args={[0.7, 0.15, 0.45]} />
+          <meshBasicMaterial color="#ffe9a8" />
+        </mesh>
+      )}
+      {/* まだあけていない たからばこは ✨がうかぶ */}
+      {!opened && (
+        <group ref={sparkle}>
+          <TextSprite text="✨" position={[0, 0, 0]} scale={0.7} bg="rgba(255,255,255,0)" />
+        </group>
+      )}
+      {!isTreasure && <TextSprite text={`🎁 ${npc.label}`} position={[0, 1.9, 0]} scale={0.9} />}
       {isNear && <NearRing />}
     </group>
   )
@@ -316,11 +401,9 @@ function TutorialArrows() {
 
   const targets: WorldNPC[] = []
   if (step === 1 || step === 2) {
-    // かんばんへ
     const sign = WORLD_NPCS.find((n) => n.id === 'sign-welcome')
     if (sign) targets.push(sign)
   } else if (step === 3 || step === 4) {
-    // 学年に合った せんせいNPCへ
     const subjects = GRADES[grade].mainSubjects
     for (const npc of WORLD_NPCS) {
       if (npc.kind === 'quest' && npc.subject && subjects.includes(npc.subject)) {

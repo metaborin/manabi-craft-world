@@ -11,7 +11,9 @@ import type {
 import { getQuestions } from '../data/questions'
 import { SUBJECTS } from '../data/grades'
 import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, xpForLevel } from '../data/rewards'
+import { TREASURE_REWARDS } from '../data/world'
 import { UI } from '../data/uiText'
+import { petCelebrate, type FxType } from '../game/effects'
 import {
   createNewSave,
   deleteSave,
@@ -59,6 +61,10 @@ interface GameState {
   /** いま近くにいるNPC（しらべるボタンの対象） */
   nearby: WorldNPC | null
   quest: QuestSession | null
+  /** 会話ウィンドウ（NPC・看板のセリフ表示） */
+  dialog: { npc: WorldNPC; index: number } | null
+  /** 報酬などの演出イベント（FxOverlayが拾って表示する） */
+  fx: { id: number; type: FxType; text?: string } | null
   /** 画面に一時的に出すメッセージ */
   toast: { id: number; text: string } | null
   /** 「はじめから」でスロットを選んだ直後か（名前入力→学年選択に進む用） */
@@ -75,6 +81,10 @@ interface GameState {
   setGrade: (g: Grade) => void
   setNearby: (npc: WorldNPC | null) => void
   interact: () => void
+  dialogNext: () => void
+  closeDialog: () => void
+  acceptQuestFromDialog: () => void
+  triggerFx: (type: FxType, text?: string) => void
   startQuest: (subject: Subject) => void
   answerQuestion: (choice: number) => void
   showHint: () => void
@@ -152,6 +162,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   settingsReturn: 'title',
   nearby: null,
   quest: null,
+  dialog: null,
+  fx: null,
   toast: null,
   isNewGame: false,
   buildSelection: null,
@@ -210,13 +222,30 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   interact: () => {
-    const { nearby, save, quest } = get()
-    if (!nearby || !save || quest) return
+    const { nearby, save, quest, dialog } = get()
+    if (!nearby || !save || quest || dialog) return
     // チュートリアル③：しらべるを おした
     get().advanceTutorial(2)
+
+    // 図鑑用：キャラクターNPCに会った記録
+    if (
+      (nearby.kind === 'quest' || nearby.kind === 'shop' || nearby.kind === 'build') &&
+      !save.metNPCs.includes(nearby.id)
+    ) {
+      mutateSave(get, set, (s) => {
+        s.metNPCs.push(nearby.id)
+      })
+    }
+
     switch (nearby.kind) {
       case 'quest':
-        get().startQuest(nearby.subject!)
+      case 'sign':
+        // 会話ウィンドウを開く（セリフがなければ即クエスト）
+        if (nearby.dialog && nearby.dialog.length > 0) {
+          set({ dialog: { npc: nearby, index: 0 } })
+        } else if (nearby.kind === 'quest') {
+          get().startQuest(nearby.subject!)
+        }
         break
       case 'shop':
         set({ screen: 'shop' })
@@ -224,10 +253,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       case 'build':
         set({ screen: 'build' })
         break
-      case 'sign':
-        get().showToast(nearby.message ?? '')
-        break
       case 'chest': {
+        // まいにちボックス（1日1回）
         if (save.chestDate === todayString()) {
           get().showToast(UI.world.chestClosed)
         } else {
@@ -235,11 +262,62 @@ export const useGameStore = create<GameState>((set, get) => ({
             s.chestDate = todayString()
             s.coins += 10
           })
+          get().triggerFx('chest', '+10 🪙')
           get().showToast(UI.world.chestOpened)
         }
         break
       }
+      case 'treasure': {
+        // たんけんの たからばこ（1回だけ）
+        if (save.openedChests.includes(nearby.id)) {
+          get().showToast(UI.world.treasureAlready)
+          break
+        }
+        const reward = TREASURE_REWARDS[nearby.id]
+        if (!reward) break
+        const parts: string[] = []
+        let newBadges: string[] = []
+        mutateSave(get, set, (s) => {
+          s.openedChests.push(nearby.id)
+          if (reward.coins) {
+            s.coins += reward.coins
+            parts.push(`🪙${reward.coins}まい`)
+          }
+          for (const [blockId, count] of Object.entries(reward.blocks ?? {})) {
+            s.blocks[blockId] = (s.blocks[blockId] ?? 0) + count
+            const def = BLOCK_MAP[blockId]
+            if (def) parts.push(`${def.emoji}${def.name}×${count}`)
+          }
+          newBadges = checkBadges(s)
+        })
+        get().triggerFx('chest', parts.join('　'))
+        get().showToast(`${UI.world.treasureOpened} ${parts.join('、')} をゲット！🎉`)
+        if (newBadges.length > 0) {
+          setTimeout(() => get().showToast(UI.toast.newBadge), 2600)
+        }
+        break
+      }
     }
+  },
+
+  dialogNext: () => {
+    const { dialog } = get()
+    if (!dialog) return
+    set({ dialog: { ...dialog, index: dialog.index + 1 } })
+  },
+
+  closeDialog: () => set({ dialog: null }),
+
+  acceptQuestFromDialog: () => {
+    const { dialog } = get()
+    if (!dialog || dialog.npc.kind !== 'quest') return
+    const subject = dialog.npc.subject!
+    set({ dialog: null })
+    get().startQuest(subject)
+  },
+
+  triggerFx: (type, text) => {
+    set({ fx: { id: ++toastId, type, text } })
   },
 
   startQuest: (subject) => {
@@ -337,6 +415,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // チュートリアル④：はじめて せいかいした
     get().advanceTutorial(3)
+
+    // ペットがよろこぶ（レベルアップのときは長めに）
+    petCelebrate(levelUp ? 3000 : 1800)
 
     set({
       quest: {
@@ -457,7 +538,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   backToTitle: () => {
     resetPlayerState()
-    set({ screen: 'title', slot: null, save: null, quest: null, nearby: null })
+    set({ screen: 'title', slot: null, save: null, quest: null, nearby: null, dialog: null, fx: null })
   },
 
   advanceTutorial: (step) => {

@@ -1,0 +1,143 @@
+import { useGameStore } from '../store/gameStore'
+import { BLOCKS, BADGES, PET_MAP, petStage } from '../data/rewards'
+import { CHARACTER_NPCS, TREASURE_COUNT } from '../data/world'
+import { SUBJECTS } from '../data/grades'
+import { UI } from '../data/uiText'
+
+/**
+ * コレクション（図鑑）画面。
+ * あつめたブロック・バッジ・たからばこ・であったNPC・ペットが見られる。
+ */
+export function ZukanScreen() {
+  const save = useGameStore((s) => s.save)
+  const setScreen = useGameStore((s) => s.setScreen)
+  if (!save) return null
+
+  /** ブロックを「あつめた」＝いま持っている or 建築でつかっている */
+  const hasBlock = (id: string) =>
+    (save.blocks[id] ?? 0) > 0 || save.buildGrid.includes(id)
+
+  const collectedBlocks = BLOCKS.filter((b) => hasBlock(b.id)).length
+  const pet = save.pet ? PET_MAP[save.pet.type] : null
+
+  return (
+    <div className="screen panel-screen">
+      <div className="panel-header">
+        <button className="btn btn-ghost btn-big" onClick={() => setScreen('status')}>
+          {UI.common.back}
+        </button>
+        <h2>{UI.zukan.heading}</h2>
+        <div />
+      </div>
+
+      <div className="panel-body">
+        {/* ブロック */}
+        <div className="status-card">
+          <div className="status-row-label">
+            {UI.zukan.blocks}（{collectedBlocks}／{BLOCKS.length}）
+          </div>
+          <div className="zukan-grid">
+            {BLOCKS.map((b) => {
+              const got = hasBlock(b.id)
+              return (
+                <div key={b.id} className={`zukan-item ${got ? 'got' : ''}`}>
+                  <span
+                    className="palette-swatch"
+                    style={{ background: got ? b.color : '#d5cdc0' }}
+                  />
+                  <span className="zukan-name">{got ? b.name : UI.zukan.unknown}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* バッジ */}
+        <div className="status-card">
+          <div className="status-row-label">
+            {UI.zukan.badges}（{save.badges.length}／{BADGES.length}）
+          </div>
+          <div className="badge-grid">
+            {BADGES.map((b) => {
+              const earned = save.badges.includes(b.id)
+              return (
+                <div key={b.id} className={`badge ${earned ? 'earned' : ''}`}>
+                  <span className="badge-icon">{earned ? b.icon : '❓'}</span>
+                  <span className="badge-name">{earned ? b.name : UI.zukan.unknown}</span>
+                  <span className="badge-desc">{b.desc}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* たからばこ */}
+        <div className="status-card">
+          <div className="status-row-label">
+            {UI.zukan.chests}（{save.openedChests.length}／{TREASURE_COUNT}）
+          </div>
+          <div className="zukan-grid">
+            {Array.from({ length: TREASURE_COUNT }).map((_, i) => {
+              const found = i < save.openedChests.length
+              return (
+                <div key={i} className={`zukan-item ${found ? 'got' : ''}`}>
+                  <span className="zukan-chest">{found ? '🎁' : '❓'}</span>
+                  <span className="zukan-name">{found ? 'はっけん！' : UI.zukan.unknown}</span>
+                </div>
+              )
+            })}
+          </div>
+          {save.openedChests.length < TREASURE_COUNT && (
+            <div className="status-sub">{UI.zukan.chestHint}</div>
+          )}
+        </div>
+
+        {/* であったなかま */}
+        <div className="status-card">
+          <div className="status-row-label">
+            {UI.zukan.npcs}（{save.metNPCs.length}／{CHARACTER_NPCS.length}）
+          </div>
+          <div className="zukan-grid">
+            {CHARACTER_NPCS.map((n) => {
+              const met = save.metNPCs.includes(n.id)
+              return (
+                <div key={n.id} className={`zukan-item ${met ? 'got' : ''}`}>
+                  <span
+                    className="zukan-npc"
+                    style={{ background: met ? n.color : '#d5cdc0' }}
+                  >
+                    {met ? '🙂' : '❓'}
+                  </span>
+                  <span className="zukan-name">
+                    {met ? n.label : UI.zukan.unknown}
+                    {met && n.subject && (
+                      <span className="zukan-sub"> {SUBJECTS[n.subject].icon}</span>
+                    )}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ペット */}
+        <div className="status-card">
+          <div className="status-row-label">{UI.zukan.pet}</div>
+          {pet && save.pet ? (
+            <div className="pet-row">
+              <span className="pet-emoji">{pet.emoji}</span>
+              <div>
+                <div>
+                  {pet.name}（{petStage(save.pet.growth)}）
+                </div>
+                <div className="status-sub">{UI.status.petGrowth(save.pet.growth)}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="status-sub">{UI.status.noPet}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

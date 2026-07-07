@@ -1,8 +1,10 @@
 import { useGameStore } from '../store/gameStore'
 import { GRADES, SUBJECTS } from '../data/grades'
-import { BADGES, PET_MAP, petStage, xpForLevel } from '../data/rewards'
+import { BADGES, BLOCKS, PET_MAP, petStage, xpForLevel } from '../data/rewards'
 import { getQuestions } from '../data/questions'
 import { AVATARS } from '../data/avatars'
+import { TREASURE_COUNT } from '../data/world'
+import { UI } from '../data/uiText'
 
 export function StatusScreen() {
   const save = useGameStore((s) => s.save)
@@ -82,6 +84,27 @@ export function StatusScreen() {
               </div>
             )
           })}
+        </div>
+
+        {/* たんけん・あつめたもの */}
+        <div className="status-card">
+          <div className="status-row-label">🗺️ たんけん・コレクション</div>
+          <div className="explore-stats">
+            <span className="explore-stat">
+              🎁 たからばこ {save.openedChests.length}／{TREASURE_COUNT}
+            </span>
+            <span className="explore-stat">
+              🧱 ブロック{' '}
+              {BLOCKS.filter((b) => (save.blocks[b.id] ?? 0) > 0 || save.buildGrid.includes(b.id)).length}
+              ／{BLOCKS.length}しゅるい
+            </span>
+            <span className="explore-stat">
+              🏗️ おいたブロック {save.stats.blocksPlaced}こ
+            </span>
+          </div>
+          <button className="btn btn-primary" onClick={() => setScreen('zukan')}>
+            {UI.zukan.openZukan} をみる ▶
+          </button>
         </div>
 
         {/* ペット */}

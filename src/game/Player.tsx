@@ -7,6 +7,8 @@ import { PET_MAP } from '../data/rewards'
 import { AVATARS } from '../data/avatars'
 import { inputState } from './input'
 import { playerState } from './playerState'
+import { petMood } from './effects'
+import { TextSprite } from './TextSprite'
 import type { WorldNPC } from '../types/game'
 
 /** プレイヤー（移動・ジャンプ・カメラ追従・ちかくのNPC判定・ペット） */
@@ -15,12 +17,18 @@ export function Player() {
   const body = useRef<THREE.Group>(null!)
   const petRef = useRef<THREE.Group>(null!)
   const velocityY = useRef(0)
+  /** なめらかな加減速のための今の速度 */
+  const vel = useRef({ x: 0, z: 0 })
+  const airborne = useRef(false)
+  /** 着地スカッシュの残り時間 */
+  const squash = useRef(0)
   /** チュートリアル①「あるいてみよう」用の移動量 */
   const walkedDistance = useRef(0)
   const camera = useThree((s) => s.camera)
   const avatar = useGameStore((s) => s.save?.avatar ?? 0)
   const petType = useGameStore((s) => s.save?.pet?.type ?? null)
   const questOpen = useGameStore((s) => s.quest !== null)
+  const dialogOpen = useGameStore((s) => s.dialog !== null)
   const color = AVATARS[avatar % AVATARS.length].color
   const petDef = petType ? PET_MAP[petType] : null
 
@@ -28,6 +36,8 @@ export function Player() {
     const delta = Math.min(dt, 0.05)
     const g = group.current
     if (!g) return
+
+    const paused = questOpen || dialogOpen
 
     // 入力の合成（キーボード＋タッチパッド）
     let mx = inputState.moveX + inputState.touchX
@@ -37,8 +47,7 @@ export function Player() {
       mx /= len
       mz /= len
     }
-    // クエスト中は動かさない
-    if (questOpen) {
+    if (paused) {
       mx = 0
       mz = 0
     }
@@ -47,40 +56,61 @@ export function Player() {
     const yaw = inputState.cameraYaw
     const c = Math.cos(yaw)
     const s = Math.sin(yaw)
-    const dx = c * mx + s * mz
-    const dz = -s * mx + c * mz
+    const dirX = c * mx + s * mz
+    const dirZ = -s * mx + c * mz
 
+    // なめらかな加減速（すっと歩き出し、すっと止まる）
     const speed = 5.5
-    g.position.x = THREE.MathUtils.clamp(g.position.x + dx * speed * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
-    g.position.z = THREE.MathUtils.clamp(g.position.z + dz * speed * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
+    const smoothing = 1 - Math.exp(-delta * 11)
+    vel.current.x += (dirX * speed - vel.current.x) * smoothing
+    vel.current.z += (dirZ * speed - vel.current.z) * smoothing
+    const moveSpeed = Math.hypot(vel.current.x, vel.current.z)
 
-    // ジャンプ
-    if (inputState.jump && g.position.y <= 0.001 && !questOpen) {
-      velocityY.current = 5.5
+    g.position.x = THREE.MathUtils.clamp(g.position.x + vel.current.x * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
+    g.position.z = THREE.MathUtils.clamp(g.position.z + vel.current.z * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
+
+    // ジャンプ＆着地
+    if (inputState.jump && g.position.y <= 0.001 && !paused) {
+      velocityY.current = 6.2
+      airborne.current = true
     }
-    velocityY.current -= 16 * delta
+    velocityY.current -= 17 * delta
     g.position.y = Math.max(0, g.position.y + velocityY.current * delta)
-    if (g.position.y === 0) velocityY.current = Math.max(velocityY.current, 0)
+    if (g.position.y === 0) {
+      if (airborne.current && velocityY.current < -4) {
+        squash.current = 0.16 // 着地でぷにっとつぶれる
+      }
+      airborne.current = false
+      velocityY.current = Math.max(velocityY.current, 0)
+    }
 
-    // 体の向きと歩きアニメ
-    const moving = Math.hypot(dx, dz) > 0.01
-    if (moving && body.current) {
-      const target = Math.atan2(dx, dz)
-      let diff = target - body.current.rotation.y
-      while (diff > Math.PI) diff -= Math.PI * 2
-      while (diff < -Math.PI) diff += Math.PI * 2
-      body.current.rotation.y += diff * Math.min(1, delta * 12)
-      body.current.position.y = Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.08
-    } else if (body.current) {
-      body.current.position.y = 0
+    // 体の向きと歩きアニメ（速度に合わせてはずむ）
+    const speedRatio = Math.min(1, moveSpeed / speed)
+    if (body.current) {
+      if (moveSpeed > 0.4) {
+        const target = Math.atan2(vel.current.x, vel.current.z)
+        let diff = target - body.current.rotation.y
+        while (diff > Math.PI) diff -= Math.PI * 2
+        while (diff < -Math.PI) diff += Math.PI * 2
+        body.current.rotation.y += diff * Math.min(1, delta * 12)
+      }
+      body.current.position.y = Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.09 * speedRatio
+
+      // 着地スカッシュ
+      if (squash.current > 0) {
+        squash.current -= delta
+        body.current.scale.set(1.12, 0.82, 1.12)
+      } else {
+        body.current.scale.lerp(new THREE.Vector3(1, 1, 1), Math.min(1, delta * 14))
+      }
     }
 
     // 位置を覚えておく（建築・ショップから戻っても同じ場所）
     playerState.pos = [g.position.x, 0, g.position.z]
 
     // チュートリアル①：すこし歩いたら達成
-    if (moving) {
-      walkedDistance.current += Math.hypot(dx, dz) * speed * delta
+    if (moveSpeed > 0.4) {
+      walkedDistance.current += moveSpeed * delta
       if (walkedDistance.current > 2.5) {
         useGameStore.getState().advanceTutorial(0)
       }
@@ -93,7 +123,7 @@ export function Player() {
       ]
     }
 
-    // カメラ追従
+    // カメラ追従（急に動かないようゆっくり追いかける）
     const dist = 10.5
     const camTarget = new THREE.Vector3(
       g.position.x + Math.sin(yaw) * dist,
@@ -115,12 +145,24 @@ export function Player() {
     }
     useGameStore.getState().setNearby(nearest)
 
-    // ペットがついてくる
+    // ペットがついてくる＆正解するとよろこぶ
     if (petRef.current) {
       const p = petRef.current
-      const behind = new THREE.Vector3(g.position.x - dx * 1.5 - 1.0, 0, g.position.z - dz * 1.5 + 0.6)
+      const behind = new THREE.Vector3(
+        g.position.x - vel.current.x * 0.28 - 1.0,
+        0,
+        g.position.z - vel.current.z * 0.28 + 0.6,
+      )
       p.position.lerp(behind, Math.min(1, delta * 3))
-      p.position.y = 0.7 + Math.sin(clock.elapsedTime * 3) * 0.15
+      const celebrating = performance.now() < petMood.celebrateUntil
+      if (celebrating) {
+        // くるくるまわって おおよろこび
+        p.rotation.y += delta * 9
+        p.position.y = 0.8 + Math.abs(Math.sin(clock.elapsedTime * 8)) * 0.5
+      } else {
+        p.rotation.y += (0 - (p.rotation.y % (Math.PI * 2))) * Math.min(1, delta * 5)
+        p.position.y = 0.7 + Math.sin(clock.elapsedTime * 3) * 0.15
+      }
     }
   })
 
@@ -182,6 +224,8 @@ export function Player() {
             <boxGeometry args={[0.07, 0.09, 0.02]} />
             <meshBasicMaterial color="#3a3a3a" />
           </mesh>
+          {/* なまえ（スプライトなのでスピンしても正面を向く） */}
+          <TextSprite text={petDef.name} position={[0, 0.75, 0]} scale={0.6} bg="rgba(255,255,255,0.85)" />
         </group>
       )}
     </>

@@ -7,6 +7,7 @@ import { StatusScreen } from './screens/StatusScreen'
 import { BuildScreen } from './screens/BuildScreen'
 import { ShopScreen } from './screens/ShopScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
+import { ZukanScreen } from './screens/ZukanScreen'
 import { Toast } from './components/Toast'
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
       {screen === 'build' && <BuildScreen />}
       {screen === 'shop' && <ShopScreen />}
       {screen === 'settings' && <SettingsScreen />}
+      {screen === 'zukan' && <ZukanScreen />}
       {/* ワールド画面以外でもトーストを出せるように */}
       {screen !== 'world' && <Toast />}
     </div>

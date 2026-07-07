@@ -1242,6 +1242,369 @@ ruby rt {
   font-size: 17px;
 }
 
+/* ============ フェーズ2.5：ゲームクオリティ改善 ============ */
+
+/* ---- タイトル画面のボクセル風背景 ---- */
+.title-screen {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(#7ec8e3 0%, #b5e3f5 55%, #d8f3e3 100%);
+}
+.title-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.title-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+}
+.title-sun {
+  position: absolute;
+  top: 6%;
+  right: 10%;
+  width: 90px;
+  height: 90px;
+  border-radius: 24px;
+  background: #ffe082;
+  box-shadow: 0 0 60px rgba(255, 224, 130, 0.9);
+  transform: rotate(12deg);
+}
+.title-cloud {
+  position: absolute;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  animation: cloud-drift 40s linear infinite;
+}
+.title-cloud.c1 { top: 12%; width: 130px; animation-duration: 46s; }
+.title-cloud.c2 { top: 24%; width: 90px; animation-duration: 34s; animation-delay: -12s; }
+.title-cloud.c3 { top: 7%; width: 110px; animation-duration: 52s; animation-delay: -30s; }
+@keyframes cloud-drift {
+  from { left: -160px; }
+  to { left: 105%; }
+}
+.title-float-block {
+  position: absolute;
+  border-radius: 8px;
+  border: 3px solid rgba(0, 0, 0, 0.12);
+  box-shadow: inset -6px -6px 0 rgba(0, 0, 0, 0.12), 0 6px 14px rgba(0, 0, 0, 0.12);
+  animation: block-float 4.5s ease-in-out infinite;
+  opacity: 0.9;
+}
+@keyframes block-float {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-16px) rotate(5deg); }
+}
+.title-hill {
+  position: absolute;
+  bottom: -40px;
+  border-radius: 50%;
+}
+.title-hill.h1 {
+  left: -12%;
+  width: 55%;
+  height: 180px;
+  background: #7cc44f;
+}
+.title-hill.h2 {
+  right: -14%;
+  width: 60%;
+  height: 150px;
+  background: #6abe30;
+}
+.title-ground {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 46px;
+  background: repeating-linear-gradient(
+    90deg,
+    #73b849 0 46px,
+    #7cc44f 46px 92px
+  );
+}
+.title-logo-blocks {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.logo-cube {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 3px solid rgba(0, 0, 0, 0.15);
+  box-shadow: inset -5px -5px 0 rgba(0, 0, 0, 0.14);
+  animation: block-float 3.6s ease-in-out infinite;
+}
+.logo-cube:nth-child(2) { animation-delay: 0.4s; }
+.logo-cube:nth-child(3) { animation-delay: 0.8s; }
+.title-logo h1 {
+  color: #fff;
+  -webkit-text-stroke: 2px rgba(74, 55, 40, 0.25);
+  text-shadow:
+    3px 3px 0 #4a8f1f,
+    6px 6px 0 rgba(74, 55, 40, 0.25);
+}
+.slot-progress {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.slot-progress-item {
+  background: var(--cream);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+/* ---- 会話ウィンドウ ---- */
+.dialog-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  width: min(640px, 94vw);
+  z-index: 90;
+}
+.dialog-box {
+  background: rgba(255, 251, 240, 0.97);
+  border: 4px solid #d8c9b8;
+  border-radius: 22px;
+  padding: 18px 22px 16px;
+  box-shadow: 0 10px 30px rgba(74, 55, 40, 0.3);
+  animation: pop 0.2s;
+}
+.dialog-name {
+  display: inline-block;
+  color: #fff;
+  font-weight: bold;
+  font-size: 16px;
+  border-radius: 999px;
+  padding: 4px 16px;
+  margin-top: -32px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.25);
+}
+.dialog-text {
+  font-size: 20px;
+  line-height: 1.8;
+  min-height: 60px;
+  animation: pop 0.25s;
+}
+.dialog-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* ---- 報酬FX（キラキラのバースト） ---- */
+.fx-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 250;
+}
+.fx-burst {
+  position: absolute;
+  font-size: 30px;
+  animation: fx-burst 1.2s ease-out forwards;
+  opacity: 0;
+}
+@keyframes fx-burst {
+  0% {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(1.15);
+    opacity: 0;
+  }
+}
+.fx-text {
+  background: rgba(255, 251, 240, 0.97);
+  border: 3px solid var(--orange);
+  border-radius: 999px;
+  padding: 12px 26px;
+  font-size: 22px;
+  font-weight: bold;
+  box-shadow: var(--shadow);
+  animation: fx-text 1.5s ease-out forwards;
+}
+@keyframes fx-text {
+  0% { transform: scale(0.5); opacity: 0; }
+  18% { transform: scale(1.08); opacity: 1; }
+  75% { transform: scale(1) translateY(0); opacity: 1; }
+  100% { transform: translateY(-30px); opacity: 0; }
+}
+
+/* ---- ショップのタブ ---- */
+.shop-tabs {
+  display: flex;
+  gap: 8px;
+  width: min(760px, 96vw);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.shop-tab {
+  background: rgba(255, 255, 255, 0.7);
+  border: 3px solid transparent;
+  border-radius: 16px 16px 0 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #8a7767;
+  padding: 10px 18px;
+}
+.shop-tab.selected {
+  background: #fff;
+  color: var(--brown);
+  border-color: var(--orange);
+  border-bottom-color: #fff;
+}
+.shop-secret {
+  font-size: 13px;
+  font-weight: bold;
+  color: #8a7767;
+  background: #f5efe4;
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+.shop-coming-soon {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* ---- 建築の保存インジケーター ---- */
+.panel-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.saved-chip {
+  background: var(--green);
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  border-radius: 999px;
+  padding: 6px 14px;
+  animation: saved-fade 1.6s ease-out forwards;
+  white-space: nowrap;
+}
+@keyframes saved-fade {
+  0% { transform: scale(0.6); opacity: 0; }
+  15% { transform: scale(1.05); opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---- 図鑑（コレクション） ---- */
+.zukan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+.zukan-item {
+  background: #f5efe4;
+  border-radius: 14px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.6;
+}
+.zukan-item.got {
+  background: #fff9e0;
+  border: 2px solid #ffd54f;
+  opacity: 1;
+}
+.zukan-name {
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+.zukan-chest {
+  font-size: 28px;
+}
+.zukan-npc {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.zukan-sub {
+  font-size: 14px;
+}
+
+/* ---- ステータスのたんけん実績 ---- */
+.explore-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.explore-stat {
+  background: var(--cream);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* ---- ホバー演出（マウス端末のみ） ---- */
+@media (hover: hover) {
+  .btn {
+    transition: transform 0.12s, filter 0.12s, box-shadow 0.12s;
+  }
+  .btn:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.03);
+    filter: brightness(1.05);
+  }
+  .choice-btn:hover {
+    border-color: var(--orange);
+    transform: translateY(-2px);
+  }
+  .slot-card,
+  .shop-item,
+  .grade-card {
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .slot-card:hover,
+  .shop-item:hover,
+  .grade-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 22px rgba(74, 55, 40, 0.22);
+  }
+}
+
 /* せまい画面ではHUDを小さく */
 @media (max-width: 560px) {
   .hud-help {

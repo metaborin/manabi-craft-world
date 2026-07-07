@@ -444,7 +444,7 @@ export const QUESTIONS: Question[] = [
     hint: '「晴れ」には「日（おひさま）」が はいっているよ',
     hint2: 'あめの かんじは「雨」だよ',
     explanation: '「晴れ」は おひさまが でている てんき だね！',
-    reward: { coins: 6, xp: 12 },
+    reward: { coins: 6, xp: 12, blocks: { bookshelf: 1 } },
   },
   {
     id: 'g2-kokugo-hantai-01',
@@ -726,7 +726,7 @@ export const QUESTIONS: Question[] = [
     hint: 'とても{昔|むかし}、{縄文|じょうもん}時代の{次|つぎ}だよ',
     hint2: '「やよい」時代だよ',
     explanation: '弥生時代に米づくりが広まって、くらしが大きく変わったんだ！',
-    reward: { coins: 8, xp: 16 },
+    reward: { coins: 8, xp: 16, blocks: { gold: 1 } },
   },
   {
     id: 'g6-eigo-time-01',

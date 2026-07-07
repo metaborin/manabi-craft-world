@@ -54,8 +54,10 @@ export const UI = {
     todaysRec: 'きょうの おすすめ：',
     dailyProgress: (done: number, goal: number) => `🎯 きょう ${done}／${goal}もん で ボーナス！`,
     dailyMax: '🌟 きょうは たくさん がんばったね！',
-    chestOpened: 'たからばこを あけた！ +10コイン🪙',
-    chestClosed: 'たからばこは あした また あくよ🔒',
+    chestOpened: 'まいにちボックスを あけた！ +10コイン🪙',
+    chestClosed: 'まいにちボックスは あした また あくよ🔒',
+    treasureOpened: 'たからばこを みつけた！',
+    treasureAlready: 'この たからばこは もう あけたよ✨',
     noQuestions: (subject: string, grade: number) =>
       `${subject}の もんだいは ${grade}ねんせいでは じゅんびちゅう！ ほかの がくねんで あそんでみてね`,
   },
@@ -82,6 +84,13 @@ export const UI = {
     free: 'すきな エリアを たんけんしてみよう🗺️',
   },
 
+  dialog: {
+    next: 'つぎへ ▶',
+    accept: 'ちょうせんする！💪',
+    later: 'またこんど',
+    ok: 'わかった！',
+  },
+
   quest: {
     praise: ['せいかい！ よくできたね！🎉', 'すごい！ せいかい！✨', 'その ちょうし！🌟', 'ピンポーン！ だいせいかい！🎊'],
     encourage: [
@@ -106,6 +115,7 @@ export const UI = {
 
   build: {
     heading: '🏠 けんちくエリア',
+    saved: '✓ ほぞんしたよ',
     selectedLabel: 'いま えらんでいる：',
     noSelection: 'したから ブロックを えらんでね',
     tip: 'ブロックを えらんで マスを タップ！ おいた ブロックは もういちど タップで はずせるよ',
@@ -115,7 +125,12 @@ export const UI = {
 
   shop: {
     heading: '🛒 ごほうびショップ',
-    blockSection: '🧱 ブロック',
+    tabBlocks: '🧱 ブロック',
+    tabDeco: '✨ かざり',
+    tabPets: '🐾 ペット',
+    tabAvatar: '🎨 アバター',
+    avatarComingSoon: 'アバターの きせかえは じゅんびちゅう！ おたのしみに🎨',
+    notForSale: 'たからばこや クエストで みつけよう！',
     petSection: '🥚 ペットのたまご（1ぴきだけ かえるよ）',
     owned: (n: number) => `もっているかず：${n}`,
     buy: (price: number) => `🪙${price} で かう`,
@@ -145,6 +160,18 @@ export const UI = {
     furiganaOn: 'つける',
     furiganaOff: 'つけない',
     note: 'せっていは この たんまつに ほぞんされるよ',
+  },
+
+  zukan: {
+    heading: '📖 コレクション',
+    blocks: '🧱 あつめた ブロック',
+    badges: '🏅 がくしゅうバッジ',
+    chests: '🎁 みつけた たからばこ',
+    npcs: '👋 であった なかま',
+    pet: '🐾 ペット',
+    unknown: '？？？',
+    chestHint: 'ワールドの すみずみを たんけんしてみよう！',
+    openZukan: '📖 コレクション',
   },
 
   status: {
