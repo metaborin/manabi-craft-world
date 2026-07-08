@@ -1747,6 +1747,101 @@ ruby rt {
   }
 }
 
+/* ============ フェーズ2.7：ミッション ============ */
+.mission-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  animation: card-in 0.3s backwards;
+}
+.mission-card.ready {
+  border: 3px solid var(--orange);
+  background: #fff9e0;
+}
+.mission-card.claimed {
+  opacity: 0.65;
+}
+.mission-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+.mission-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.mission-title {
+  font-weight: bold;
+  font-size: 16px;
+}
+.mission-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mission-count {
+  font-size: 13px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.mission-fill {
+  background: linear-gradient(90deg, #ffd54f, var(--orange));
+}
+.mission-reward {
+  font-size: 13px;
+  color: #8a7767;
+}
+.mission-state {
+  font-size: 13px;
+  font-weight: bold;
+  color: #8a7767;
+  white-space: nowrap;
+}
+.mission-state.done {
+  color: var(--green-dark);
+}
+.mission-claim {
+  animation: pulse 1s infinite alternate;
+  white-space: nowrap;
+}
+.mission-alldone {
+  background: linear-gradient(90deg, #fff3b0, #ffe082);
+  border-radius: 16px;
+  padding: 14px 18px;
+  text-align: center;
+  font-weight: bold;
+  box-shadow: var(--shadow);
+}
+
+/* 「つぎにすること」バナーをタップできるように */
+.guide-clickable {
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: var(--font);
+  color: var(--brown);
+}
+.guide-clickable:active {
+  transform: scale(0.97);
+}
+.guide-banner.guide-ready {
+  border-color: var(--green);
+  background: #f0fbf1;
+  animation: pulse 1.2s infinite alternate;
+}
+.guide-open {
+  background: var(--orange);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 3px 9px;
+}
+
 /* ---- ホバー演出（マウス端末のみ） ---- */
 @media (hover: hover) {
   .btn {

@@ -11,6 +11,7 @@ import { ShopScreen } from './screens/ShopScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { ZukanScreen } from './screens/ZukanScreen'
 import { AvatarScreen } from './screens/AvatarScreen'
+import { MissionScreen } from './screens/MissionScreen'
 import { Toast } from './components/Toast'
 
 /** 個別の効果音（正解・設置など）が鳴るボタンには「タップ音」を重ねない */
@@ -49,6 +50,7 @@ export default function App() {
       {screen === 'settings' && <SettingsScreen />}
       {screen === 'zukan' && <ZukanScreen />}
       {screen === 'avatar' && <AvatarScreen />}
+      {screen === 'mission' && <MissionScreen />}
       {/* ワールド画面以外でもトーストを出せるように */}
       {screen !== 'world' && <Toast />}
     </div>

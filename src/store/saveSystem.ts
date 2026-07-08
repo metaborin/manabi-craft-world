@@ -36,6 +36,8 @@ export function createNewSave(name: string, avatar: number): SaveData {
     tutorialDone: false,
     openedChests: [],
     metNPCs: [],
+    daily: { date: todayString(), counters: {}, claimed: [], bonusClaimed: false },
+    totalMissionsCompleted: 0,
   }
 }
 
@@ -60,6 +62,12 @@ export function loadSave(slot: SlotId): SaveData | null {
     // フェーズ2.5で追加された項目を補完する
     data.openedChests ??= []
     data.metNPCs ??= []
+    // フェーズ2.7：ミッション関連を補完。日付が変わっていたらリセット
+    data.daily ??= { date: todayString(), counters: {}, claimed: [], bonusClaimed: false }
+    if (data.daily.date !== todayString()) {
+      data.daily = { date: todayString(), counters: {}, claimed: [], bonusClaimed: false }
+    }
+    data.totalMissionsCompleted ??= 0
     return data
   } catch {
     return null

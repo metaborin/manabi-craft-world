@@ -3,12 +3,14 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGameStore } from '../store/gameStore'
 import { WORLD_HALF, WORLD_NPCS } from '../data/world'
-import { PET_MAP } from '../data/rewards'
+import { PET_MAP, petScale } from '../data/rewards'
 import { AVATARS } from '../data/avatars'
 import { inputState } from './input'
 import { playerState } from './playerState'
 import { petMood } from './effects'
 import { playSound } from './sound'
+import { sampleGround, STEP_UP } from './terrain'
+import { UI } from '../data/uiText'
 import { TextSprite } from './TextSprite'
 import type { WorldNPC } from '../types/game'
 
@@ -23,11 +25,16 @@ export function Player() {
   const airborne = useRef(false)
   /** 着地スカッシュの残り時間 */
   const squash = useRef(0)
+  /** 水に落ちたときにもどる、さいごに立っていた安全な場所 */
+  const lastSafe = useRef<[number, number]>([0, 5])
+  /** 水からもどった直後は、すこしのあいだ水判定をしない（連続で落ちない） */
+  const splashCooldown = useRef(0)
   /** チュートリアル①「あるいてみよう」用の移動量 */
   const walkedDistance = useRef(0)
   const camera = useThree((s) => s.camera)
   const avatar = useGameStore((s) => s.save?.avatar ?? 0)
   const petType = useGameStore((s) => s.save?.pet?.type ?? null)
+  const petGrowth = useGameStore((s) => s.save?.pet?.growth ?? 0)
   const questOpen = useGameStore((s) => s.quest !== null)
   const dialogOpen = useGameStore((s) => s.dialog !== null)
   const avatarDef = AVATARS[avatar % AVATARS.length]
@@ -39,7 +46,18 @@ export function Player() {
     const g = group.current
     if (!g) return
 
+    // 「ひろばへもどる」ボタンが押されたら安全な広場へ
+    if (playerState.respawnQueued) {
+      playerState.respawnQueued = false
+      g.position.set(0, 0.1, 5)
+      vel.current.x = 0
+      vel.current.z = 0
+      velocityY.current = 0
+      lastSafe.current = [0, 5]
+    }
+
     const paused = questOpen || dialogOpen
+    const buildGrid = useGameStore.getState().save?.buildGrid ?? null
 
     // 入力の合成（キーボード＋タッチパッド）
     let mx = inputState.moveX + inputState.touchX
@@ -68,23 +86,72 @@ export function Player() {
     vel.current.z += (dirZ * speed - vel.current.z) * smoothing
     const moveSpeed = Math.hypot(vel.current.x, vel.current.z)
 
-    g.position.x = THREE.MathUtils.clamp(g.position.x + vel.current.x * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
-    g.position.z = THREE.MathUtils.clamp(g.position.z + vel.current.z * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
+    // ---- 地形をみながら横に動く（壁と高い段差は入れない） ----
+    const feetY = g.position.y
+    const canEnter = (nx: number, nz: number) => {
+      const t = sampleGround(nx, nz, buildGrid)
+      if (t.wall) return false
+      // いまの足の高さから STEP_UP より高い場所へは、上からしか入れない
+      if (t.height - feetY > STEP_UP) return false
+      return true
+    }
+    let nx = THREE.MathUtils.clamp(g.position.x + vel.current.x * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
+    let nz = THREE.MathUtils.clamp(g.position.z + vel.current.z * delta, -WORLD_HALF + 1, WORLD_HALF - 1)
+    // X・Zを別々に判定すると、壁ぞいでも引っかからずスライドできる
+    if (!canEnter(nx, g.position.z)) {
+      nx = g.position.x
+      vel.current.x = 0
+    }
+    if (!canEnter(nx, nz)) {
+      nz = g.position.z
+      vel.current.z = 0
+    }
+    g.position.x = nx
+    g.position.z = nz
 
-    // ジャンプ＆着地
-    if (inputState.jump && g.position.y <= 0.001 && !paused) {
+    // ---- いまいる場所の地面の高さ ----
+    const here = sampleGround(nx, nz, buildGrid)
+    const ground = here.height
+
+    // ジャンプ（地面に立っているときだけ）
+    if (inputState.jump && g.position.y <= ground + 0.001 && !paused) {
       velocityY.current = 6.2
       airborne.current = true
       playSound('jump')
     }
+
+    // 重力と着地
     velocityY.current -= 17 * delta
-    g.position.y = Math.max(0, g.position.y + velocityY.current * delta)
-    if (g.position.y === 0) {
+    let newY = g.position.y + velocityY.current * delta
+    if (newY > ground + 0.02 && velocityY.current < 0) airborne.current = true
+    if (newY <= ground) {
       if (airborne.current && velocityY.current < -4) {
         squash.current = 0.16 // 着地でぷにっとつぶれる
+        if (ground > 0.01) playSound('place') // ブロックの上にコトン
       }
+      newY = ground
       airborne.current = false
-      velocityY.current = Math.max(velocityY.current, 0)
+      velocityY.current = 0
+    }
+    // なだらかな段差はすっとのぼる
+    if (!airborne.current && newY < ground) newY = ground
+    g.position.y = newY
+
+    // ---- 水に落ちたら、さいごに立っていた場所へもどす ----
+    splashCooldown.current = Math.max(0, splashCooldown.current - delta)
+    if (here.water && g.position.y <= 0.02 && splashCooldown.current <= 0) {
+      const [sx, sz] = lastSafe.current
+      g.position.set(sx, 0.1, sz)
+      vel.current.x = 0
+      vel.current.z = 0
+      velocityY.current = 0
+      airborne.current = false
+      splashCooldown.current = 1.2
+      playSound('jump')
+      useGameStore.getState().showToast(UI.world2.splash)
+    } else if (!airborne.current && !here.water) {
+      // 安全な場所をおぼえておく
+      lastSafe.current = [g.position.x, g.position.z]
     }
 
     // 体の向きと歩きアニメ（速度に合わせてはずむ）
@@ -122,6 +189,7 @@ export function Player() {
     if (import.meta.env.DEV) {
       ;(window as unknown as Record<string, unknown>).__playerPos = [
         Math.round(g.position.x * 10) / 10,
+        Math.round(g.position.y * 100) / 100,
         Math.round(g.position.z * 10) / 10,
       ]
     }
@@ -157,14 +225,16 @@ export function Player() {
         g.position.z - vel.current.z * 0.28 + 0.6,
       )
       p.position.lerp(behind, Math.min(1, delta * 3))
+      // ペットも地面の高さにあわせてふわふわ（ブロックの上にもついてくる）
+      const petGroundH = sampleGround(p.position.x, p.position.z, buildGrid).height
       const celebrating = performance.now() < petMood.celebrateUntil
       if (celebrating) {
         // くるくるまわって おおよろこび
         p.rotation.y += delta * 9
-        p.position.y = 0.8 + Math.abs(Math.sin(clock.elapsedTime * 8)) * 0.5
+        p.position.y = petGroundH + 0.8 + Math.abs(Math.sin(clock.elapsedTime * 8)) * 0.5
       } else {
         p.rotation.y += (0 - (p.rotation.y % (Math.PI * 2))) * Math.min(1, delta * 5)
-        p.position.y = 0.7 + Math.sin(clock.elapsedTime * 3) * 0.15
+        p.position.y = petGroundH + 0.7 + Math.sin(clock.elapsedTime * 3) * 0.15
       }
     }
   })
@@ -238,7 +308,7 @@ export function Player() {
         </mesh>
       </group>
       {petDef && (
-        <group ref={petRef} position={[-1, 0.7, 6]}>
+        <group ref={petRef} position={[-1, 0.7, 6]} scale={petScale(petGrowth)}>
           <mesh>
             <boxGeometry args={[0.45, 0.45, 0.45]} />
             <meshLambertMaterial color={petDef.color} />

@@ -1,6 +1,8 @@
 import { useGameStore } from '../store/gameStore'
 import { GRADES, SUBJECTS } from '../data/grades'
-import { DAILY_BONUS, BLOCK_MAP } from '../data/rewards'
+import { petExpToNext } from '../data/rewards'
+import { missionsForDate, missionClaimed, missionDone, missionProgress } from '../data/missions'
+import { todayString } from '../store/saveSystem'
 import { UI } from '../data/uiText'
 import type { Subject } from '../types/game'
 
@@ -13,10 +15,12 @@ function todaysSubject(grade: number): Subject {
 /**
  * ワールド画面の上部に出す「つぎにすること」の案内。
  * はじめてのプレイではチュートリアル（6ステップ）を表示し、
- * おわったあとは いまの状態に合わせたおすすめを表示する。
+ * おわったあとは きょうのミッションに合わせた目標を表示する。
+ * バナーをタップするとミッション画面が開く。
  */
 export function TutorialGuide() {
   const save = useGameStore((s) => s.save)
+  const setScreen = useGameStore((s) => s.setScreen)
   if (!save) return null
 
   // チュートリアル中
@@ -35,27 +39,33 @@ export function TutorialGuide() {
     )
   }
 
-  // チュートリアル後：「つぎにすること」のおすすめ
+  // チュートリアル後：ミッションにあわせた「つぎにすること」
+  const missions = missionsForDate(todayString())
+  const claimable = missions.find((m) => missionDone(save, m) && !missionClaimed(save, m))
+  const nextMission = missions.find((m) => !missionDone(save, m))
+
   let action: string
-  if (save.dailyCount < DAILY_BONUS.small.at) {
-    action = UI.nextAction.quest(save.dailyCount, DAILY_BONUS.small.at)
-  } else if (save.dailyCount < DAILY_BONUS.big.at) {
-    action = UI.nextAction.quest(save.dailyCount, DAILY_BONUS.big.at)
-  } else if (Object.values(save.blocks).some((n) => n > 0)) {
-    action = UI.nextAction.build
-  } else if (save.coins >= Math.min(...Object.values(BLOCK_MAP).map((b) => b.price))) {
-    action = UI.nextAction.shop
+  if (save.pet && petExpToNext(save.pet.growth) <= 2) {
+    action = UI.petLevel.toNext(petExpToNext(save.pet.growth))
+  } else if (claimable) {
+    action = 'ミッション たっせい！🎁 ここを タップして うけとろう'
+  } else if (nextMission) {
+    action = `${nextMission.title}（${UI.mission.left(nextMission.goal - missionProgress(save, nextMission))}）`
   } else {
-    action = UI.nextAction.free
+    action = 'きょうの ミッション ぜんぶクリア！🌟 じゆうに あそぼう'
   }
 
   const rec = todaysSubject(save.grade)
   return (
     <div className="hud-guide">
-      <div className="guide-banner">
-        <span className="guide-icon">📢</span>
+      <button
+        className={`guide-banner guide-clickable ${claimable ? 'guide-ready' : ''}`}
+        onClick={() => setScreen('mission')}
+      >
+        <span className="guide-icon">🎯</span>
         <span className="guide-text">{action}</span>
-      </div>
+        <span className="guide-open">▶</span>
+      </button>
       <span className="daily-rec">
         {UI.world.todaysRec}
         {SUBJECTS[rec].icon} {SUBJECTS[rec].name}

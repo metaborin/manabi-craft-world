@@ -187,3 +187,33 @@ export const TREASURE_COUNT = Object.keys(TREASURE_REWARDS).length
 export const CHARACTER_NPCS = WORLD_NPCS.filter(
   (n) => n.kind === 'quest' || n.kind === 'shop' || n.kind === 'build',
 )
+
+/**
+ * 木の位置（見た目はWorldCanvas、当たり判定はterrainが同じデータを使う）
+ */
+export const TREE_POSITIONS: Record<
+  'normal' | 'sakura' | 'pine',
+  [number, number, number][]
+> = {
+  normal: [
+    // こくごのもり
+    [-17, 0, -13],
+    [-11, 0, -13],
+    [-17, 0, -7],
+    [-14, 0, -15],
+    // そのほか
+    [12, 0, 16],
+    [-19, 0, 13],
+    [20, 0, 8],
+  ],
+  sakura: [
+    [-11, 0, -7],
+    [4, 0, 6],
+    [-4, 0, 20],
+  ],
+  pine: [
+    [19, 0, -19],
+    [16, 0, -17],
+    [-6, 0, -19],
+  ],
+}

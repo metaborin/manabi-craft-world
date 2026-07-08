@@ -126,7 +126,30 @@ export interface SaveData {
   openedChests: string[]
   /** 話しかけたことのあるNPCのID（図鑑用） */
   metNPCs: string[]
+  /** きょうのミッションの進行状況（日付が変わるとリセット） */
+  daily: DailyState
+  /** これまでに達成したミッションの合計 */
+  totalMissionsCompleted: number
 }
+
+/** きょうのミッション・ボーナスの状態 */
+export interface DailyState {
+  date: string
+  /** ミッション用カウンター（counter名 → 回数） */
+  counters: Record<string, number>
+  /** きょう報酬を受け取ったミッションID */
+  claimed: string[]
+  /** きょうの「ようこそボーナス」を受け取ったか */
+  bonusClaimed: boolean
+}
+
+/** ミッションが数えるできごとの種類 */
+export type MissionCounter =
+  | 'questsCleared'
+  | 'chestsOpened'
+  | 'blocksPlaced'
+  | 'npcTalked'
+  | 'shopVisited'
 
 /** 端末ごとの設定（セーブとは別にlocalStorageへ保存） */
 export interface Settings {
@@ -151,6 +174,7 @@ export type Screen =
   | 'settings'
   | 'zukan'
   | 'avatar'
+  | 'mission'
 
 /** ワールド内で話しかけられるもの（NPC・看板・宝箱など） */
 export interface WorldNPC {

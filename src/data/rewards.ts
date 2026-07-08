@@ -61,6 +61,28 @@ export function petStage(growth: number): string {
   return 'あかちゃん'
 }
 
+/** ペットのレベル（成長ポイントから計算。5ポイントで1レベル） */
+export const PET_EXP_PER_LEVEL = 5
+
+export function petLevel(growth: number): number {
+  return Math.floor(growth / PET_EXP_PER_LEVEL) + 1
+}
+
+/** いまのレベル内での進み具合（0〜1） */
+export function petLevelProgress(growth: number): number {
+  return (growth % PET_EXP_PER_LEVEL) / PET_EXP_PER_LEVEL
+}
+
+/** つぎのレベルまであと何ポイントか */
+export function petExpToNext(growth: number): number {
+  return PET_EXP_PER_LEVEL - (growth % PET_EXP_PER_LEVEL)
+}
+
+/** ペットの表示サイズ（レベルで少しずつ大きくなる） */
+export function petScale(growth: number): number {
+  return Math.min(1 + (petLevel(growth) - 1) * 0.07, 1.6)
+}
+
 /** つぎの成長段階までの情報（おとなになったらnull） */
 export function petNextStage(
   growth: number,
@@ -162,6 +184,20 @@ export const BADGES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
     desc: 'たからばこを 5こ ぜんぶ あけた',
     icon: '🗝️',
     check: (s) => (s.openedChests?.length ?? 0) >= 5,
+  },
+  {
+    id: 'mission-5',
+    name: 'ミッションビギナー',
+    desc: 'ミッションを 5かい たっせいした',
+    icon: '🎯',
+    check: (s) => (s.totalMissionsCompleted ?? 0) >= 5,
+  },
+  {
+    id: 'mission-20',
+    name: 'ミッションマスター',
+    desc: 'ミッションを 20かい たっせいした',
+    icon: '🏆',
+    check: (s) => (s.totalMissionsCompleted ?? 0) >= 20,
   },
 ]
 

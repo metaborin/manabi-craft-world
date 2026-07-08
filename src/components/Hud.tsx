@@ -2,6 +2,7 @@ import { useGameStore } from '../store/gameStore'
 import { GRADES } from '../data/grades'
 import { AVATARS } from '../data/avatars'
 import { xpForLevel } from '../data/rewards'
+import { requestRespawn } from '../game/playerState'
 import { UI } from '../data/uiText'
 
 /** ワールド画面の上部HUD（プレイヤー情報・コイン・ボタン類） */
@@ -41,11 +42,23 @@ export function Hud() {
         <button className="btn btn-chip" onClick={() => setScreen('grade')}>
           {GRADES[save.grade].label}
         </button>
+        <button className="btn btn-chip" onClick={() => setScreen('mission')}>
+          {UI.mission.open}
+        </button>
         <button className="btn btn-chip" onClick={() => setScreen('status')}>
           📋 ステータス
         </button>
         <button className="btn btn-chip" onClick={openSettings} aria-label={UI.settings.heading}>
           ⚙️
+        </button>
+        <button
+          className="btn btn-chip"
+          onClick={() => {
+            requestRespawn()
+            useGameStore.getState().showToast(UI.world2.backedToPlaza)
+          }}
+        >
+          {UI.world2.backToPlaza}
         </button>
       </div>
     </div>

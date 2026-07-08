@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type {
   Grade,
+  MissionCounter,
   Question,
   SaveData,
   Screen,
@@ -10,10 +11,11 @@ import type {
 } from '../types/game'
 import { getQuestions } from '../data/questions'
 import { SUBJECTS } from '../data/grades'
-import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, xpForLevel } from '../data/rewards'
+import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, petLevel, xpForLevel } from '../data/rewards'
+import { missionsForDate, missionClaimed, missionDone } from '../data/missions'
 import { TREASURE_REWARDS } from '../data/world'
 import { UI } from '../data/uiText'
-import { petCelebrate, playFx, type FxType } from '../game/effects'
+import { petCelebrate, playFx, registerFxSink, type FxType } from '../game/effects'
 import { playSound, soundState } from '../game/sound'
 import {
   createNewSave,
@@ -96,6 +98,12 @@ interface GameState {
   selectBuildBlock: (blockId: string | null) => void
   buyBlock: (blockId: string) => void
   buyPet: (petId: string) => void
+  /** ミッションのカウンターを進める（達成したら知らせる） */
+  bumpMission: (counter: MissionCounter, n?: number) => void
+  /** ミッション報酬を受け取る */
+  claimMission: (missionId: string) => void
+  /** 1日1回の「ようこそボーナス」 */
+  grantDailyWelcome: () => void
   showToast: (text: string) => void
   backToTitle: () => void
   /** チュートリアルを1つ進める（stepが一致するときだけ） */
@@ -130,6 +138,32 @@ function addXp(s: SaveData, amount: number): boolean {
   return leveled
 }
 
+/**
+ * ペットに経験値を足す。レベルが上がったらtrueを返す。
+ * （ペットレベルは pet.growth から計算するので、保存項目は増えない）
+ */
+function addPetExpTo(s: SaveData, n: number): boolean {
+  if (!s.pet) return false
+  const before = petLevel(s.pet.growth)
+  s.pet.growth += n
+  return petLevel(s.pet.growth) > before
+}
+
+/** ペットレベルアップの演出（トースト＋音＋よろこび） */
+function notifyPetLevelUp(get: () => GameState) {
+  const growth = get().save?.pet?.growth ?? 0
+  get().showToast(UI.petLevel.up(petLevel(growth)))
+  playSound('levelup')
+  petCelebrate(3000)
+}
+
+/** きょうのカウンターが日付切り替えでリセットされているか確認 */
+function ensureDaily(s: SaveData) {
+  if (s.daily.date !== todayString()) {
+    s.daily = { date: todayString(), counters: {}, claimed: [], bonusClaimed: false }
+  }
+}
+
 /** 新しく取れたバッジのIDを返す */
 function checkBadges(s: SaveData): string[] {
   const earned: string[] = []
@@ -155,6 +189,7 @@ function pickQuestions(save: SaveData, subject: Subject): Question[] {
 function getBlockPrice(blockId: string): number | null {
   return BLOCK_MAP[blockId]?.price ?? null
 }
+
 
 const initialSettings = loadSettings()
 // 効果音モジュールに設定を反映（以後は updateSettings が同期する）
@@ -193,6 +228,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       writeSave(slot, data)
       resetPlayerState()
       set({ slot, save: data, screen: 'world', isNewGame: false })
+      // きょう初めてなら「ようこそボーナス」（ワールドが見えてから）
+      setTimeout(() => get().grantDailyWelcome(), 900)
     } else {
       set({ slot, save: null, screen: 'name', isNewGame: true })
     }
@@ -255,6 +292,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       case 'sign':
         // 会話ウィンドウを開く（セリフがなければ即クエスト）
         playSound('talk')
+        get().bumpMission('npcTalked')
         if (nearby.dialog && nearby.dialog.length > 0) {
           set({ dialog: { npc: nearby, index: 0 } })
         } else if (nearby.kind === 'quest') {
@@ -262,6 +300,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
         break
       case 'shop':
+        get().bumpMission('shopVisited')
         set({ screen: 'shop' })
         break
       case 'build':
@@ -279,6 +318,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           playFx('chest', '+10 🪙')
           petCelebrate(1400)
           get().showToast(UI.world.chestOpened)
+          get().bumpMission('chestsOpened')
         }
         break
       }
@@ -308,6 +348,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         playFx('chest', parts.join('　'))
         petCelebrate(1600)
         get().showToast(`${UI.world.treasureOpened} ${parts.join('、')} をゲット！🎉`)
+        get().bumpMission('chestsOpened')
         if (newBadges.length > 0) {
           setTimeout(() => get().showToast(UI.toast.newBadge), 2600)
         }
@@ -391,6 +432,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const coins = firstTime ? q.reward.coins : Math.max(1, Math.floor(q.reward.coins / 2))
     const xp = q.reward.xp
     let levelUp = false
+    let petLeveled = false
     let newBadges: string[] = []
     let bonusCoins = 0
     const bonusMessages: string[] = []
@@ -413,7 +455,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       const sub = (s.stats.bySubject[q.subject] ??= { answered: 0, cleared: 0 })
       sub.answered += 1
       if (firstTime) sub.cleared += 1
-      if (s.pet) s.pet.growth += 1
+
+      // ペットの経験値（正解で+1）
+      petLeveled = addPetExpTo(s, 1)
 
       // きょうのクリア数ボーナス
       s.dailyCount += 1
@@ -439,6 +483,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // ペットがよろこぶ（レベルアップのときは長めに）
     petCelebrate(levelUp ? 3000 : 1800)
+
+    // ミッション：もんだいをクリア
+    get().bumpMission('questsCleared')
+
+    // ペットのレベルアップ通知（正解演出のあとに）
+    if (petLeveled) setTimeout(() => notifyPetLevelUp(get), 1600)
 
     set({
       quest: {
@@ -516,6 +566,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       })
       // チュートリアル⑥：ブロックを おいた
       get().advanceTutorial(5)
+      // ミッション：ブロックをおく
+      get().bumpMission('blocksPlaced')
     }
   },
 
@@ -557,6 +609,78 @@ export const useGameStore = create<GameState>((set, get) => ({
     get().showToast(UI.shop.petBought(pet.name, pet.emoji))
   },
 
+  bumpMission: (counter, n = 1) => {
+    const { save } = get()
+    if (!save) return
+    const missions = missionsForDate(todayString())
+    const before = save.daily.date === todayString() ? (save.daily.counters[counter] ?? 0) : 0
+    mutateSave(get, set, (s) => {
+      ensureDaily(s)
+      s.daily.counters[counter] = (s.daily.counters[counter] ?? 0) + n
+    })
+    // このカウンターのミッションが「いま」達成されたら知らせる
+    const after = before + n
+    const justDone = missions.some(
+      (m) => m.counter === counter && before < m.goal && after >= m.goal,
+    )
+    if (justDone) {
+      playSound('coin')
+      setTimeout(() => get().showToast(UI.mission.doneToast), 1200)
+    }
+  },
+
+  claimMission: (missionId) => {
+    const { save } = get()
+    if (!save) return
+    const m = missionsForDate(todayString()).find((x) => x.id === missionId)
+    if (!m || !missionDone(save, m) || missionClaimed(save, m)) return
+    let petLeveled = false
+    const parts: string[] = []
+    mutateSave(get, set, (s) => {
+      ensureDaily(s)
+      s.daily.claimed.push(m.id)
+      s.totalMissionsCompleted += 1
+      if (m.reward.coins) {
+        s.coins += m.reward.coins
+        parts.push(`🪙${m.reward.coins}`)
+      }
+      if (m.reward.xp) {
+        addXp(s, m.reward.xp)
+        parts.push(`✨${m.reward.xp}`)
+      }
+      if (m.reward.petExp && s.pet) {
+        petLeveled = addPetExpTo(s, m.reward.petExp)
+        parts.push(`🐾+${m.reward.petExp}`)
+      }
+      for (const [blockId, count] of Object.entries(m.reward.blocks ?? {})) {
+        s.blocks[blockId] = (s.blocks[blockId] ?? 0) + count
+        const def = BLOCK_MAP[blockId]
+        if (def) parts.push(`${def.emoji}${def.name}`)
+      }
+      checkBadges(s)
+    })
+    playFx('chest', parts.join('　'))
+    petCelebrate(1600)
+    get().showToast(UI.mission.claimedToast(m.title))
+    if (petLeveled) setTimeout(() => notifyPetLevelUp(get), 1800)
+  },
+
+  grantDailyWelcome: () => {
+    const { save } = get()
+    if (!save || save.daily.bonusClaimed) return
+    let petLeveled = false
+    mutateSave(get, set, (s) => {
+      ensureDaily(s)
+      if (s.daily.bonusClaimed) return
+      s.daily.bonusClaimed = true
+      s.coins += 5
+      if (s.pet) petLeveled = addPetExpTo(s, 1)
+    })
+    playFx('coins', '+5 🪙')
+    get().showToast(UI.mission.welcome)
+    if (petLeveled) setTimeout(() => notifyPetLevelUp(get), 1800)
+  },
+
   showToast: (text) => {
     set({ toast: { id: ++toastId, text } })
   },
@@ -581,3 +705,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (finished) get().showToast(UI.tutorial.done)
   },
 }))
+
+// effects.ts の playFx がFxOverlayに演出を届けられるように登録する
+registerFxSink((type, text) => useGameStore.getState().triggerFx(type, text))
+
+// 開発時のデバッグ用（本番ビルドには含まれない）
+if (import.meta.env.DEV) {
+  ;(window as unknown as Record<string, unknown>).__store = useGameStore
+}

@@ -1,7 +1,7 @@
 // 報酬・演出のイベントをまとめるモジュール。
 // 画面のキラキラ（FxOverlay）と効果音（sound.ts）をここで同時に発火する。
+// ※循環importを避けるため、ストアへは registerFxSink() で登録された関数経由で通知する。
 
-import { useGameStore } from '../store/gameStore'
 import { playSound, type SoundName } from './sound'
 
 export type FxType = 'coins' | 'chest' | 'levelup' | 'badge' | 'correct'
@@ -24,8 +24,15 @@ export function petCelebrate(durationMs = 1800) {
   petMood.celebrateUntil = performance.now() + durationMs
 }
 
+/** FxOverlayへの通知先（gameStoreが起動時に登録する） */
+let fxSink: ((type: FxType, text?: string) => void) | null = null
+
+export function registerFxSink(fn: (type: FxType, text?: string) => void) {
+  fxSink = fn
+}
+
 /** 演出（キラキラ＋効果音）を発火する。音が鳴らなくても画面演出は動く */
 export function playFx(type: FxType, text?: string) {
   playSound(FX_SOUND[type])
-  useGameStore.getState().triggerFx(type, text)
+  fxSink?.(type, text)
 }

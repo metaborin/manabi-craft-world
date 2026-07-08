@@ -1,6 +1,6 @@
 import { useGameStore } from '../store/gameStore'
 import { GRADES, SUBJECTS } from '../data/grades'
-import { BADGES, BLOCKS, PET_MAP, petStage, petNextStage, xpForLevel } from '../data/rewards'
+import { BADGES, BLOCKS, PET_MAP, petLevel, petStage, petNextStage, xpForLevel } from '../data/rewards'
 import { getQuestions } from '../data/questions'
 import { AVATARS } from '../data/avatars'
 import { TREASURE_COUNT } from '../data/world'
@@ -104,10 +104,18 @@ export function StatusScreen() {
             <span className="explore-stat">
               🏗️ おいたブロック {save.stats.blocksPlaced}こ
             </span>
+            <span className="explore-stat">
+              🎯 ミッションたっせい {save.totalMissionsCompleted}かい
+            </span>
           </div>
-          <button className="btn btn-primary" onClick={() => setScreen('zukan')}>
-            {UI.zukan.openZukan} をみる ▶
-          </button>
+          <div className="bottom-row">
+            <button className="btn btn-primary" onClick={() => setScreen('mission')}>
+              {UI.mission.open} をみる ▶
+            </button>
+            <button className="btn btn-primary" onClick={() => setScreen('zukan')}>
+              {UI.zukan.openZukan} をみる ▶
+            </button>
+          </div>
         </div>
 
         {/* ペット */}
@@ -119,7 +127,7 @@ export function StatusScreen() {
                 <span className="pet-emoji">{pet.emoji}</span>
                 <div>
                   <div>
-                    {pet.name}（{petStage(save.pet.growth)}）
+                    {pet.name}（{petStage(save.pet.growth)}）　{UI.petLevel.label(petLevel(save.pet.growth))}
                   </div>
                   <div className="status-sub">{pet.desc}</div>
                 </div>

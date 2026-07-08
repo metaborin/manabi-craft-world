@@ -177,6 +177,34 @@ export const UI = {
     growHint: 'もんだいに せいかいすると そだつよ',
   },
 
+  mission: {
+    heading: '🎯 きょうの ミッション',
+    open: '🎯 ミッション',
+    subheading: 'きょうの もくひょう！ クリアして ごほうびを もらおう',
+    claim: 'ごほうびを うけとる！🎁',
+    claimed: '✓ うけとった',
+    doneToast: 'ミッション たっせい！🎯 「ミッション」で ごほうびを うけとろう',
+    claimedToast: (title: string) => `「${title}」の ごほうびを もらった！🎉`,
+    allDone: '🌟 きょうの ミッション ぜんぶクリア！ すごい！ また あした あそぼうね',
+    left: (n: number) => `あと ${n}`,
+    welcome: 'きょうも ようこそ！ ボーナス +5🪙',
+    welcomeBonus: 'きょうの ようこそボーナス',
+    welcomeClaimed: 'きょうは もう うけとったよ。また あしたね！',
+    totalDone: (n: number) => `いままでに たっせいした ミッション：${n}かい`,
+  },
+
+  petLevel: {
+    label: (lv: number) => `ペットレベル ${lv}`,
+    up: (lv: number) => `🐾 ペットの レベルが あがった！ レベル${lv}に なったよ！`,
+    toNext: (n: number) => `あと ${n}ポイントで ペットが せいちょう！`,
+  },
+
+  world2: {
+    backToPlaza: '⛲ ひろばへ',
+    backedToPlaza: 'ひろばに もどったよ⛲',
+    splash: 'ぷはっ！ みずから あがったよ💦',
+  },
+
   zukan: {
     heading: '📖 コレクション',
     blocks: '🧱 あつめた ブロック',

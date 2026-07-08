@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGameStore } from '../store/gameStore'
-import { WORLD_HALF, WORLD_NPCS, BUILD_GRID_SIZE, BUILD_ORIGIN } from '../data/world'
+import { WORLD_HALF, WORLD_NPCS, BUILD_GRID_SIZE, BUILD_ORIGIN, TREE_POSITIONS } from '../data/world'
 import { BLOCK_MAP } from '../data/rewards'
 import { GRADES } from '../data/grades'
 import { todayString } from '../store/saveSystem'
@@ -140,22 +140,16 @@ function Decorations() {
 
   return (
     <group>
-      {/* ---- 木々 ---- */}
-      {/* こくごのもり */}
-      <Tree position={[-17, 0, -13]} />
-      <Tree position={[-11, 0, -13]} />
-      <Tree position={[-17, 0, -7]} />
-      <Tree position={[-14, 0, -15]} />
-      <SakuraTree position={[-11, 0, -7]} />
-      {/* そのほか */}
-      <Tree position={[12, 0, 16]} />
-      <Tree position={[-19, 0, 13]} />
-      <PineTree position={[19, 0, -19]} />
-      <PineTree position={[16, 0, -17]} />
-      <PineTree position={[-6, 0, -19]} />
-      <SakuraTree position={[4, 0, 6]} />
-      <SakuraTree position={[-4, 0, 20]} />
-      <Tree position={[20, 0, 8]} />
+      {/* ---- 木々（位置データはterrainの当たり判定と共有） ---- */}
+      {TREE_POSITIONS.normal.map((p, i) => (
+        <Tree key={`t${i}`} position={p} />
+      ))}
+      {TREE_POSITIONS.sakura.map((p, i) => (
+        <SakuraTree key={`s${i}`} position={p} />
+      ))}
+      {TREE_POSITIONS.pine.map((p, i) => (
+        <PineTree key={`p${i}`} position={p} />
+      ))}
 
       {/* ---- はな ---- */}
       {flowers.map((f, i) => (
@@ -174,7 +168,7 @@ function Decorations() {
 
       {/* さんすうのおか：かずのとう＋かいだん＋ふうしゃ */}
       <NumberTower position={[17, 0, -13]} />
-      <NumberStairs position={[10.5, 0, -12]} />
+      <NumberStairs position={[12.2, 0, -12]} />
       <Windmill position={[20, 0, -11]} />
 
       {/* こくごのもり：おおきな本＋えんぴつ */}

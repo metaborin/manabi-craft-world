@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/gameStore'
-import { BLOCKS, BADGES, PET_MAP, petStage } from '../data/rewards'
+import { BLOCKS, BADGES, PET_MAP, petLevel, petStage } from '../data/rewards'
 import { CHARACTER_NPCS, TREASURE_COUNT } from '../data/world'
 import { SUBJECTS } from '../data/grades'
 import { AVATARS } from '../data/avatars'
@@ -130,7 +130,7 @@ export function ZukanScreen() {
               <span className="pet-emoji">{pet.emoji}</span>
               <div>
                 <div>
-                  {pet.name}（{petStage(save.pet.growth)}）
+                  {pet.name}（{petStage(save.pet.growth)}）　{UI.petLevel.label(petLevel(save.pet.growth))}
                 </div>
                 <div className="status-sub">{pet.desc}</div>
                 <div className="status-sub">{UI.status.petGrowth(save.pet.growth)}</div>
@@ -139,6 +139,7 @@ export function ZukanScreen() {
           ) : (
             <div className="status-sub">{UI.status.noPet}</div>
           )}
+          <div className="status-sub">{UI.mission.totalDone(save.totalMissionsCompleted)}</div>
         </div>
 
         {/* アバター */}
