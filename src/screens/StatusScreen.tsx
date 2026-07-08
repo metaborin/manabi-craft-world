@@ -98,7 +98,13 @@ export function StatusScreen() {
             </span>
             <span className="explore-stat">
               🧱 ブロック{' '}
-              {BLOCKS.filter((b) => (save.blocks[b.id] ?? 0) > 0 || save.buildGrid.includes(b.id)).length}
+              {
+                BLOCKS.filter(
+                  (b) =>
+                    (save.blocks[b.id] ?? 0) > 0 ||
+                    save.buildLayers.some((layer) => layer.includes(b.id)),
+                ).length
+              }
               ／{BLOCKS.length}しゅるい
             </span>
             <span className="explore-stat">

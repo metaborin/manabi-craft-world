@@ -419,31 +419,43 @@ function TutorialArrows() {
 }
 
 // ---------------------------------------------------------------
-// けんちくエリアのブロック（ワールドにも表示される）
+// けんちくエリアのブロック（ワールドにも表示され、上に乗れる）
 // ---------------------------------------------------------------
 function BuiltBlocks() {
-  const grid = useGameStore((s) => s.save?.buildGrid)
-  if (!grid) return null
+  const layers = useGameStore((s) => s.save?.buildLayers)
+  if (!layers) return null
   const [ox, oz] = BUILD_ORIGIN
+  const hasAny = layers.some((layer) => layer.some(Boolean))
   return (
     <group>
-      {grid.map((blockId, i) => {
-        if (!blockId) return null
-        const def = BLOCK_MAP[blockId]
-        if (!def) return null
-        const x = ox + (i % BUILD_GRID_SIZE)
-        const z = oz + Math.floor(i / BUILD_GRID_SIZE)
-        return (
-          <mesh key={i} position={[x, 0.5, z]}>
-            <boxGeometry args={[0.96, 0.96, 0.96]} />
-            <meshLambertMaterial
-              color={def.color}
-              transparent={blockId === 'glass' || blockId === 'water'}
-              opacity={blockId === 'glass' ? 0.55 : blockId === 'water' ? 0.75 : 1}
-            />
-          </mesh>
-        )
-      })}
+      {layers.map((layer, li) =>
+        layer.map((blockId, i) => {
+          if (!blockId) return null
+          const def = BLOCK_MAP[blockId]
+          if (!def) return null
+          const x = ox + (i % BUILD_GRID_SIZE)
+          const z = oz + Math.floor(i / BUILD_GRID_SIZE)
+          return (
+            <mesh key={`${li}-${i}`} position={[x, 0.5 + li, z]}>
+              <boxGeometry args={[0.96, 0.96, 0.96]} />
+              <meshLambertMaterial
+                color={def.color}
+                transparent={blockId === 'glass' || blockId === 'water'}
+                opacity={blockId === 'glass' ? 0.55 : blockId === 'water' ? 0.75 : 1}
+              />
+            </mesh>
+          )
+        }),
+      )}
+      {/* なにか たてると「じぶんの けんちく」の めじるしが出る */}
+      {hasAny && (
+        <TextSprite
+          text="✨ じぶんの けんちく"
+          position={[0.5, 4.6, 16.5]}
+          scale={1.1}
+          bg="rgba(255,249,224,0.95)"
+        />
+      )}
     </group>
   )
 }

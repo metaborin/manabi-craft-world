@@ -6,6 +6,17 @@ export const WORLD_HALF = 22
 /** 建築エリアのグリッド設定（ワールド内にも表示される） */
 export const BUILD_GRID_SIZE = 10
 export const BUILD_ORIGIN: [number, number] = [-4.5, 12] // グリッド左上のワールド座標(x,z)
+/** 積める高さ（段数）。将来ここを増やせば4段以上にできる */
+export const BUILD_MAX_LAYERS = 3
+/** 置けるブロックの合計数の上限（低スペック端末対策。ここで変更できる） */
+export const BUILD_BLOCK_LIMIT = 50
+
+/** 空の建築レイヤーを作る */
+export function emptyBuildLayers(): (string | null)[][] {
+  return Array.from({ length: BUILD_MAX_LAYERS }, () =>
+    Array(BUILD_GRID_SIZE * BUILD_GRID_SIZE).fill(null),
+  )
+}
 
 /** ワールドに配置するNPC・看板・宝箱 */
 export const WORLD_NPCS: WorldNPC[] = [

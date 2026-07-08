@@ -17,7 +17,7 @@ export function ZukanScreen() {
 
   /** ブロックを「あつめた」＝いま持っている or 建築でつかっている */
   const hasBlock = (id: string) =>
-    (save.blocks[id] ?? 0) > 0 || save.buildGrid.includes(id)
+    (save.blocks[id] ?? 0) > 0 || save.buildLayers.some((layer) => layer.includes(id))
 
   const collectedBlocks = BLOCKS.filter((b) => hasBlock(b.id)).length
   const pet = save.pet ? PET_MAP[save.pet.type] : null

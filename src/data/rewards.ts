@@ -9,6 +9,8 @@ export const BLOCKS: BlockDef[] = [
   { id: 'brick', name: 'れんがブロック', color: '#d95f3b', emoji: '🧱', price: 10, category: 'block', inShop: true },
   { id: 'sand', name: 'すなブロック', color: '#f0d98c', emoji: '🏖️', price: 8, category: 'block', inShop: true },
   { id: 'water', name: 'みずブロック', color: '#5ec8f2', emoji: '💧', price: 10, category: 'block', inShop: true },
+  { id: 'road', name: 'みちブロック', color: '#cbb37e', emoji: '🛤️', price: 5, category: 'block', inShop: true },
+  { id: 'sky', name: 'みずいろブロック', color: '#9fdcf2', emoji: '🩵', price: 8, category: 'block', inShop: true },
   { id: 'glass', name: 'ガラスブロック', color: '#cfeef7', emoji: '🧊', price: 12, category: 'deco', inShop: true },
   { id: 'flower', name: 'はなブロック', color: '#ff7eb3', emoji: '🌸', price: 12, category: 'deco', inShop: true },
   { id: 'star', name: 'ほしブロック', color: '#ffd54f', emoji: '⭐', price: 20, category: 'deco', inShop: true },
@@ -198,6 +200,20 @@ export const BADGES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
     desc: 'ミッションを 20かい たっせいした',
     icon: '🏆',
     check: (s) => (s.totalMissionsCompleted ?? 0) >= 20,
+  },
+  {
+    id: 'stack-2',
+    name: 'はじめての 2かいだて',
+    desc: 'ブロックを 2だんに つんだ',
+    icon: '🏗️',
+    check: (s) => s.buildLayers?.[1]?.some((c) => c !== null) ?? false,
+  },
+  {
+    id: 'template-1',
+    name: 'おてほん けんちくし',
+    desc: 'おてほんで たてものを たてた',
+    icon: '📐',
+    check: (s) => (s.stats.templatesUsed ?? 0) >= 1,
   },
 ]
 

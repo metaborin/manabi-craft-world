@@ -1842,6 +1842,92 @@ ruby rt {
   padding: 3px 9px;
 }
 
+/* ============ フェーズ2.8：建築強化 ============ */
+
+/* モード切替（おく／けす） */
+.build-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.build-mode-label {
+  font-weight: bold;
+  font-size: 16px;
+}
+.build-mode-btn {
+  background: #fff;
+  color: var(--brown);
+  border: 3px solid #d8c9b8;
+  font-size: 19px;
+  min-height: 54px;
+  min-width: 120px;
+}
+.build-mode-btn.selected {
+  background: var(--orange);
+  color: #fff;
+  border-color: var(--orange-dark);
+  box-shadow: 0 4px 0 var(--orange-dark);
+}
+.build-mode-btn.erase.selected {
+  background: #7986cb;
+  border-color: #5c6bc0;
+  box-shadow: 0 4px 0 #5c6bc0;
+}
+
+/* 上限ひょうじ */
+.build-limit {
+  background: var(--cream);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.build-limit.warn {
+  background: #ffe0b2;
+  color: #b35a00;
+}
+
+/* けすモードのグリッド：おいてあるマスが けせるように見える */
+.build-grid.erasing .build-cell.filled {
+  outline: 2px dashed #7986cb;
+  outline-offset: -3px;
+}
+.build-grid.erasing .build-cell:not(.filled) {
+  opacity: 0.55;
+}
+
+/* つんだ段数バッジ */
+.build-cell {
+  position: relative;
+}
+.stack-badge {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  background: rgba(74, 55, 40, 0.85);
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 0 5px;
+  line-height: 1.5;
+}
+
+/* おてほん建築 */
+.template-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 4px 0;
+}
+
 /* ---- ホバー演出（マウス端末のみ） ---- */
 @media (hover: hover) {
   .btn {

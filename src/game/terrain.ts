@@ -75,23 +75,29 @@ function inWater(x: number, z: number): boolean {
 
 /**
  * その場所の地形を調べる。
- * buildGrid を渡すと、建築エリアに置いたブロック（高さ1）にも乗れる。
+ * buildLayers を渡すと、建築エリアに置いたブロック（1〜3段）にも乗れる。
  */
 export function sampleGround(
   x: number,
   z: number,
-  buildGrid: (string | null)[] | null | undefined,
+  buildLayers: (string | null)[][] | null | undefined,
 ): TerrainSample {
   let height = 0
   let wall = false
 
-  // 建築エリアのブロック
-  if (buildGrid) {
+  // 建築エリアのブロック（積んだ高さぶん立てる）
+  if (buildLayers) {
     const [ox, oz] = BUILD_ORIGIN
     const col = Math.round(x - ox)
     const row = Math.round(z - oz)
     if (col >= 0 && col < BUILD_GRID_SIZE && row >= 0 && row < BUILD_GRID_SIZE) {
-      if (buildGrid[row * BUILD_GRID_SIZE + col]) height = 1.0
+      const cell = row * BUILD_GRID_SIZE + col
+      for (let layer = buildLayers.length - 1; layer >= 0; layer--) {
+        if (buildLayers[layer]?.[cell]) {
+          height = layer + 1
+          break
+        }
+      }
     }
   }
 

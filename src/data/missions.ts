@@ -58,6 +58,22 @@ export const DAILY_MISSIONS: MissionDef[] = [
     counter: 'shopVisited',
     reward: { coins: 5, xp: 5 },
   },
+  {
+    id: 'm-erase1',
+    icon: '🧽',
+    title: 'ブロックを 1こ けしてみよう',
+    goal: 1,
+    counter: 'blocksErased',
+    reward: { coins: 5, xp: 5 },
+  },
+  {
+    id: 'm-stack2',
+    icon: '🏗️',
+    title: 'ブロックを 2だんに つんでみよう',
+    goal: 1,
+    counter: 'blocksStacked',
+    reward: { coins: 8, xp: 8, petExp: 1 },
+  },
 ]
 
 /** その日のミッション一覧（将来ここで日替わりにする） */

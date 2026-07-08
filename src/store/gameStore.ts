@@ -13,7 +13,14 @@ import { getQuestions } from '../data/questions'
 import { SUBJECTS } from '../data/grades'
 import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, petLevel, xpForLevel } from '../data/rewards'
 import { missionsForDate, missionClaimed, missionDone } from '../data/missions'
-import { TREASURE_REWARDS } from '../data/world'
+import { BUILD_TEMPLATES, templateCost, templateCell } from '../data/templates'
+import {
+  BUILD_BLOCK_LIMIT,
+  BUILD_GRID_SIZE,
+  BUILD_MAX_LAYERS,
+  BUILD_ORIGIN,
+  TREASURE_REWARDS,
+} from '../data/world'
 import { UI } from '../data/uiText'
 import { petCelebrate, playFx, registerFxSink, type FxType } from '../game/effects'
 import { playSound, soundState } from '../game/sound'
@@ -26,7 +33,7 @@ import {
   type SlotId,
 } from './saveSystem'
 import { loadSettings, writeSettings } from './settingsSystem'
-import { resetPlayerState } from '../game/playerState'
+import { playerState, resetPlayerState } from '../game/playerState'
 
 /** 1クエスト＝3問のセッション */
 export interface QuestSession {
@@ -94,7 +101,15 @@ interface GameState {
   showHint: () => void
   questNext: () => void
   closeQuest: () => void
-  placeBlock: (cell: number) => void
+  /** 建築モード（おく／けす） */
+  buildMode: 'place' | 'erase'
+  setBuildMode: (m: 'place' | 'erase') => void
+  /** ブロックを置く（いちばん下のあいている段に積む） */
+  placeBlockAt: (cell: number) => void
+  /** いちばん上のブロックをけす（てもとに戻る） */
+  eraseBlockAt: (cell: number) => void
+  /** おてほん建築をたてる */
+  applyTemplate: (templateId: string) => void
   selectBuildBlock: (blockId: string | null) => void
   buyBlock: (blockId: string) => void
   buyPet: (petId: string) => void
@@ -208,6 +223,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   toast: null,
   isNewGame: false,
   buildSelection: null,
+  buildMode: 'place',
 
   setScreen: (s) => set({ screen: s }),
 
@@ -541,34 +557,124 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   selectBuildBlock: (blockId) => set({ buildSelection: blockId }),
 
-  placeBlock: (cell) => {
+  setBuildMode: (m) => set({ buildMode: m }),
+
+  placeBlockAt: (cell) => {
     const { save, buildSelection } = get()
     if (!save) return
-    const current = save.buildGrid[cell]
-    if (current) {
-      // 置いてあるブロックをはずす（手もとに戻る）
-      playSound('remove')
-      mutateSave(get, set, (s) => {
-        s.blocks[current] = (s.blocks[current] ?? 0) + 1
-        s.buildGrid[cell] = null
-      })
-    } else if (buildSelection && (save.blocks[buildSelection] ?? 0) > 0) {
-      playSound('place')
-      mutateSave(get, set, (s) => {
-        s.blocks[buildSelection] = (s.blocks[buildSelection] ?? 0) - 1
-        s.buildGrid[cell] = buildSelection
-        s.stats.blocksPlaced += 1
-        const earned = checkBadges(s)
-        if (earned.length > 0) {
-          // チュートリアル完了トーストと重ならないよう、少し待ってから出す
-          setTimeout(() => get().showToast(UI.toast.newBadge), 2600)
-        }
-      })
-      // チュートリアル⑥：ブロックを おいた
-      get().advanceTutorial(5)
-      // ミッション：ブロックをおく
-      get().bumpMission('blocksPlaced')
+    // どの段に置くか＝いちばん下のあいている段（浮いたブロックはできない）
+    let layer = 0
+    while (layer < BUILD_MAX_LAYERS && save.buildLayers[layer][cell]) layer++
+    if (layer >= BUILD_MAX_LAYERS) {
+      get().showToast(UI.build.tooHigh)
+      return
     }
+    if (!buildSelection) {
+      get().showToast(UI.build.noBlockSelected)
+      return
+    }
+    if ((save.blocks[buildSelection] ?? 0) <= 0) {
+      get().showToast(UI.build.outOfBlock)
+      return
+    }
+    // 上限チェック
+    const placedCount = save.buildLayers.flat().filter(Boolean).length
+    if (placedCount >= BUILD_BLOCK_LIMIT) {
+      get().showToast(UI.build.limitReached)
+      return
+    }
+    // プレイヤーが立っているマスには置けない（とじこめ防止）
+    const [px, , pz] = playerState.pos
+    const [ox, oz] = BUILD_ORIGIN
+    const pCol = Math.round(px - ox)
+    const pRow = Math.round(pz - oz)
+    if (pRow * BUILD_GRID_SIZE + pCol === cell) {
+      get().showToast(UI.build.cantPlaceHere)
+      return
+    }
+
+    playSound('place')
+    mutateSave(get, set, (s) => {
+      s.blocks[buildSelection] = (s.blocks[buildSelection] ?? 0) - 1
+      s.buildLayers[layer][cell] = buildSelection
+      s.stats.blocksPlaced += 1
+      const earned = checkBadges(s)
+      if (earned.length > 0) {
+        setTimeout(() => get().showToast(UI.toast.newBadge), 2600)
+      }
+    })
+    // チュートリアル⑥：ブロックを おいた
+    get().advanceTutorial(5)
+    // ミッション：ブロックをおく／2だんにつむ
+    get().bumpMission('blocksPlaced')
+    if (layer >= 1) get().bumpMission('blocksStacked')
+  },
+
+  eraseBlockAt: (cell) => {
+    const { save } = get()
+    if (!save) return
+    // いちばん上のブロックをさがす
+    let layer = BUILD_MAX_LAYERS - 1
+    while (layer >= 0 && !save.buildLayers[layer][cell]) layer--
+    if (layer < 0) {
+      get().showToast(UI.build.nothingToErase)
+      return
+    }
+    const blockId = save.buildLayers[layer][cell]!
+    playSound('remove')
+    mutateSave(get, set, (s) => {
+      s.blocks[blockId] = (s.blocks[blockId] ?? 0) + 1
+      s.buildLayers[layer][cell] = null
+    })
+    // ミッション：ブロックをけす
+    get().bumpMission('blocksErased')
+  },
+
+  applyTemplate: (templateId) => {
+    const { save } = get()
+    if (!save) return
+    const t = BUILD_TEMPLATES.find((x) => x.id === templateId)
+    if (!t) return
+    // 置くばしょが あいているか
+    for (const [col, row, layer] of t.blocks) {
+      if (save.buildLayers[layer][templateCell(col, row)]) {
+        get().showToast(UI.build.templateBlocked)
+        return
+      }
+    }
+    // 上限チェック
+    const placedCount = save.buildLayers.flat().filter(Boolean).length
+    if (placedCount + t.blocks.length > BUILD_BLOCK_LIMIT) {
+      get().showToast(UI.build.templateLimit)
+      return
+    }
+    // ブロックが足りるか
+    const cost = templateCost(t)
+    for (const [blockId, count] of Object.entries(cost)) {
+      if ((save.blocks[blockId] ?? 0) < count) {
+        const def = BLOCK_MAP[blockId]
+        get().showToast(
+          UI.build.templateNeed(def?.name ?? blockId, count - (save.blocks[blockId] ?? 0)),
+        )
+        return
+      }
+    }
+    // たてる！
+    mutateSave(get, set, (s) => {
+      for (const [blockId, count] of Object.entries(cost)) {
+        s.blocks[blockId] = (s.blocks[blockId] ?? 0) - count
+      }
+      for (const [col, row, layer, blockId] of t.blocks) {
+        s.buildLayers[layer][templateCell(col, row)] = blockId
+      }
+      s.stats.blocksPlaced += t.blocks.length
+      s.stats.templatesUsed = (s.stats.templatesUsed ?? 0) + 1
+      checkBadges(s)
+    })
+    playFx('chest', `${t.icon} ${t.name}！`)
+    get().showToast(UI.build.templateDone(t.name))
+    get().bumpMission('blocksPlaced', t.blocks.length)
+    if (t.blocks.some(([, , layer]) => layer >= 1)) get().bumpMission('blocksStacked')
   },
 
   buyBlock: (blockId) => {

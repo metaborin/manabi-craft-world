@@ -43,7 +43,13 @@ function SlotCard({ slot }: { slot: SlotId }) {
             <span className="slot-progress-item">🏅 {data.badges.length}／{BADGES.length}</span>
             <span className="slot-progress-item">
               🧱{' '}
-              {BLOCKS.filter((b) => (data.blocks[b.id] ?? 0) > 0 || data.buildGrid.includes(b.id)).length}
+              {
+                BLOCKS.filter(
+                  (b) =>
+                    (data.blocks[b.id] ?? 0) > 0 ||
+                    data.buildLayers.some((layer) => layer.includes(b.id)),
+                ).length
+              }
               ／{BLOCKS.length}
             </span>
             <span className="slot-progress-item">⭐ {data.clearedQuests.length}もん</span>

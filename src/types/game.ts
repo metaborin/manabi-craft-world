@@ -90,6 +90,8 @@ export interface SaveStats {
   answered: number
   correct: number
   blocksPlaced: number
+  /** おてほん建築を使った回数 */
+  templatesUsed?: number
   bySubject: Partial<Record<Subject, SubjectStats>>
 }
 
@@ -109,8 +111,13 @@ export interface SaveData {
   clearedQuests: string[]
   badges: string[]
   pet: PetState | null
-  /** 建築エリア（10x10グリッド）。null = 何も置いていない */
-  buildGrid: (string | null)[]
+  /**
+   * 建築エリア（10x10グリッド×3段）。buildLayers[段][マス] = ブロックID。
+   * null = 何も置いていない。段は下から0,1,2。
+   */
+  buildLayers: (string | null)[][]
+  /** @deprecated 旧形式（1段のみ）。読み込み時に buildLayers[0] へ変換される */
+  buildGrid?: (string | null)[]
   stats: SaveStats
   lastPlayed: string
   /** きょうクリアした問題数（日付が変わるとリセット） */
@@ -150,6 +157,8 @@ export type MissionCounter =
   | 'blocksPlaced'
   | 'npcTalked'
   | 'shopVisited'
+  | 'blocksErased'
+  | 'blocksStacked'
 
 /** 端末ごとの設定（セーブとは別にlocalStorageへ保存） */
 export interface Settings {

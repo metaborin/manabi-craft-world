@@ -1,5 +1,5 @@
 import type { Grade, SaveData } from '../types/game'
-import { BUILD_GRID_SIZE } from '../data/world'
+import { emptyBuildLayers } from '../data/world'
 
 const KEY_PREFIX = 'manabi-craft-save-'
 
@@ -21,12 +21,12 @@ export function createNewSave(name: string, avatar: number): SaveData {
     level: 1,
     xp: 0,
     unlockedAreas: ['plaza', 'sansu', 'kokugo', 'build', 'shop'],
-    blocks: { grass: 3, dirt: 3 },
+    blocks: { grass: 3, dirt: 3, road: 2 },
     items: [],
     clearedQuests: [],
     badges: [],
     pet: null,
-    buildGrid: Array(BUILD_GRID_SIZE * BUILD_GRID_SIZE).fill(null),
+    buildLayers: emptyBuildLayers(),
     stats: { answered: 0, correct: 0, blocksPlaced: 0, bySubject: {} },
     lastPlayed: new Date().toISOString(),
     dailyCount: 0,
@@ -68,6 +68,16 @@ export function loadSave(slot: SlotId): SaveData | null {
       data.daily = { date: todayString(), counters: {}, claimed: [], bonusClaimed: false }
     }
     data.totalMissionsCompleted ??= 0
+    // フェーズ2.8：建築を3段レイヤーに拡張。旧buildGrid（1段）は1だんめに変換
+    if (!data.buildLayers) {
+      data.buildLayers = emptyBuildLayers()
+      if (data.buildGrid) {
+        for (let i = 0; i < Math.min(data.buildGrid.length, data.buildLayers[0].length); i++) {
+          data.buildLayers[0][i] = data.buildGrid[i]
+        }
+        delete data.buildGrid
+      }
+    }
     return data
   } catch {
     return null

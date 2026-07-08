@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+﻿import { useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGameStore } from '../store/gameStore'
@@ -57,7 +57,7 @@ export function Player() {
     }
 
     const paused = questOpen || dialogOpen
-    const buildGrid = useGameStore.getState().save?.buildGrid ?? null
+    const buildLayers = useGameStore.getState().save?.buildLayers ?? null
 
     // 入力の合成（キーボード＋タッチパッド）
     let mx = inputState.moveX + inputState.touchX
@@ -89,7 +89,7 @@ export function Player() {
     // ---- 地形をみながら横に動く（壁と高い段差は入れない） ----
     const feetY = g.position.y
     const canEnter = (nx: number, nz: number) => {
-      const t = sampleGround(nx, nz, buildGrid)
+      const t = sampleGround(nx, nz, buildLayers)
       if (t.wall) return false
       // いまの足の高さから STEP_UP より高い場所へは、上からしか入れない
       if (t.height - feetY > STEP_UP) return false
@@ -110,7 +110,7 @@ export function Player() {
     g.position.z = nz
 
     // ---- いまいる場所の地面の高さ ----
-    const here = sampleGround(nx, nz, buildGrid)
+    const here = sampleGround(nx, nz, buildLayers)
     const ground = here.height
 
     // ジャンプ（地面に立っているときだけ）
@@ -226,7 +226,7 @@ export function Player() {
       )
       p.position.lerp(behind, Math.min(1, delta * 3))
       // ペットも地面の高さにあわせてふわふわ（ブロックの上にもついてくる）
-      const petGroundH = sampleGround(p.position.x, p.position.z, buildGrid).height
+      const petGroundH = sampleGround(p.position.x, p.position.z, buildLayers).height
       const celebrating = performance.now() < petMood.celebrateUntil
       if (celebrating) {
         // くるくるまわって おおよろこび
