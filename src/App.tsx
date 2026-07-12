@@ -1,28 +1,53 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { useGameStore } from './store/gameStore'
 import { initAudioUnlock, playSound } from './game/sound'
+import { flushSave } from './store/saveSystem'
 import { TitleScreen } from './screens/TitleScreen'
 import { NameScreen } from './screens/NameScreen'
 import { GradeScreen } from './screens/GradeScreen'
 import { WorldScreen } from './screens/WorldScreen'
-import { StatusScreen } from './screens/StatusScreen'
-import { BuildScreen } from './screens/BuildScreen'
-import { ShopScreen } from './screens/ShopScreen'
-import { SettingsScreen } from './screens/SettingsScreen'
-import { ZukanScreen } from './screens/ZukanScreen'
-import { AvatarScreen } from './screens/AvatarScreen'
-import { MissionScreen } from './screens/MissionScreen'
-import { HelpScreen } from './screens/HelpScreen'
 import { Toast } from './components/Toast'
 import { StoryOverlay } from './components/StoryOverlay'
 import { AreaUnlockOverlay } from './components/AreaUnlockOverlay'
 
+// あまり開かない画面は遅延読み込みにして、最初の読み込みを軽くする
+const StatusScreen = lazy(() =>
+  import('./screens/StatusScreen').then((m) => ({ default: m.StatusScreen })),
+)
+const BuildScreen = lazy(() =>
+  import('./screens/BuildScreen').then((m) => ({ default: m.BuildScreen })),
+)
+const ShopScreen = lazy(() =>
+  import('./screens/ShopScreen').then((m) => ({ default: m.ShopScreen })),
+)
+const SettingsScreen = lazy(() =>
+  import('./screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
+)
+const ZukanScreen = lazy(() =>
+  import('./screens/ZukanScreen').then((m) => ({ default: m.ZukanScreen })),
+)
+const AvatarScreen = lazy(() =>
+  import('./screens/AvatarScreen').then((m) => ({ default: m.AvatarScreen })),
+)
+const MissionScreen = lazy(() =>
+  import('./screens/MissionScreen').then((m) => ({ default: m.MissionScreen })),
+)
+const HelpScreen = lazy(() =>
+  import('./screens/HelpScreen').then((m) => ({ default: m.HelpScreen })),
+)
+
 /** 個別の効果音（正解・設置など）が鳴るボタンには「タップ音」を重ねない */
 const TAP_SOUND_EXCLUDE = ['.choice-btn', '.interact-btn', '.touch-search', '.touch-jump', '.build-cell']
+
+/** 遅延読み込み中に一瞬だけ出す表示 */
+function LazyFallback() {
+  return <div className="screen panel-screen lazy-loading">よみこみちゅう…</div>
+}
 
 export default function App() {
   const screen = useGameStore((s) => s.screen)
   const textSize = useGameStore((s) => s.settings.textSize)
+  const lite = useGameStore((s) => s.settings.liteMode === 'on')
   const showStory = useGameStore(
     (s) => s.storyReplay || (s.screen === 'world' && s.save?.storyProgress === 0),
   )
@@ -38,26 +63,36 @@ export default function App() {
       playSound('tap')
     }
     document.addEventListener('click', onClick, true)
+    // タブを閉じる・切りかえる前に、書き込み待ちのセーブを確実に保存する
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') flushSave()
+    }
+    window.addEventListener('pagehide', flushSave)
+    document.addEventListener('visibilitychange', onHide)
     return () => {
       removeUnlock()
       document.removeEventListener('click', onClick, true)
+      window.removeEventListener('pagehide', flushSave)
+      document.removeEventListener('visibilitychange', onHide)
     }
   }, [])
 
   return (
-    <div className={`app ${textSize === 'large' ? 'text-large' : ''}`}>
+    <div className={`app ${textSize === 'large' ? 'text-large' : ''} ${lite ? 'lite' : ''}`}>
       {screen === 'title' && <TitleScreen />}
       {screen === 'name' && <NameScreen />}
       {screen === 'grade' && <GradeScreen />}
       {screen === 'world' && <WorldScreen />}
-      {screen === 'status' && <StatusScreen />}
-      {screen === 'build' && <BuildScreen />}
-      {screen === 'shop' && <ShopScreen />}
-      {screen === 'settings' && <SettingsScreen />}
-      {screen === 'zukan' && <ZukanScreen />}
-      {screen === 'avatar' && <AvatarScreen />}
-      {screen === 'mission' && <MissionScreen />}
-      {screen === 'help' && <HelpScreen />}
+      <Suspense fallback={<LazyFallback />}>
+        {screen === 'status' && <StatusScreen />}
+        {screen === 'build' && <BuildScreen />}
+        {screen === 'shop' && <ShopScreen />}
+        {screen === 'settings' && <SettingsScreen />}
+        {screen === 'zukan' && <ZukanScreen />}
+        {screen === 'avatar' && <AvatarScreen />}
+        {screen === 'mission' && <MissionScreen />}
+        {screen === 'help' && <HelpScreen />}
+      </Suspense>
       {/* オープニングとエリア解放のお祝いは、どの画面よりも上に出す */}
       {showStory && <StoryOverlay />}
       <AreaUnlockOverlay />

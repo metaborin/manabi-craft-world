@@ -8,11 +8,14 @@ import { TutorialGuide } from '../components/TutorialGuide'
 import { Toast } from '../components/Toast'
 import { DialogBox } from '../components/DialogBox'
 import { FxOverlay } from '../components/FxOverlay'
+import { FpsMeter } from '../components/FpsMeter'
 import { QuestModal } from './QuestModal'
 import { UI } from '../data/uiText'
 
 export function WorldScreen() {
-  const save = useGameStore((s) => s.save)
+  // save全体を購読すると、コイン増加などのたびに3Dワールド全体が
+  // 再レンダリングされてカクつくため、「あるかどうか」だけを見る
+  const hasSave = useGameStore((s) => s.save !== null)
   const quest = useGameStore((s) => s.quest)
   const touchSetting = useGameStore((s) => s.settings.touchButtons)
   const dragRef = useRef<{ id: number; x: number } | null>(null)
@@ -31,7 +34,7 @@ export function WorldScreen() {
     })
   }, [])
 
-  if (!save) return null
+  if (!hasSave) return null
 
   const showTouchControls =
     touchSetting === 'on' || (touchSetting === 'auto' && isTouchDevice())
@@ -70,6 +73,7 @@ export function WorldScreen() {
       <FxOverlay />
       <Toast />
       {quest && <QuestModal />}
+      {import.meta.env.DEV && <FpsMeter />}
     </div>
   )
 }

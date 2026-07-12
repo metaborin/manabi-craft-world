@@ -256,6 +256,9 @@ export const UI = {
     furigana: 'ふりがな',
     furiganaOn: 'つける',
     furiganaOff: 'つけない',
+    liteMode: 'けいりょうモード（うごきが おもいときは オンにしてね）',
+    liteOn: 'オン',
+    liteOff: 'オフ',
     note: 'せっていは この たんまつに ほぞんされるよ',
   },
 

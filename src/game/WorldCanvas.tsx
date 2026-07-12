@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGameStore } from '../store/gameStore'
@@ -112,33 +112,63 @@ function mulberry32(seed: number) {
   }
 }
 
-function Decorations() {
-  const flowers = useMemo(() => {
+/**
+ * 花。1つずつメッシュにすると60ドローコール以上になるため、
+ * instancedMeshでまとめて1回で描く。けいりょうモードでは数を減らす。
+ */
+function Flowers({ lite }: { lite: boolean }) {
+  const ref = useRef<THREE.InstancedMesh>(null!)
+
+  const items = useMemo(() => {
     const rand = mulberry32(42)
-    const items: { pos: [number, number, number]; color: string }[] = []
+    const list: { pos: [number, number, number]; color: string }[] = []
     const colors = ['#ff7eb3', '#ffd54f', '#ffffff', '#9575cd']
     // 野原にちらほら
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < (lite ? 14 : 26); i++) {
       const x = (rand() - 0.5) * (WORLD_HALF * 2 - 4)
       const z = (rand() - 0.5) * (WORLD_HALF * 2 - 4)
       if (dist(x, z, 0, 0) < 5 || dist(x, z, 8, -17) < 4) continue
       if (x >= 9 && x <= 12 && z >= -15) continue // 川
       const [bx, bz] = BUILD_ORIGIN
       if (x > bx - 1 && x < bx + BUILD_GRID_SIZE && z > bz - 1 && z < bz + BUILD_GRID_SIZE) continue
-      items.push({ pos: [x, 0.15, z], color: colors[Math.floor(rand() * colors.length)] })
+      list.push({ pos: [x, 0.15, z], color: colors[Math.floor(rand() * colors.length)] })
     }
     // はなばたけ（みっしり）
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < (lite ? 18 : 40); i++) {
       const a = rand() * Math.PI * 2
       const r = rand() * 3
-      items.push({
+      list.push({
         pos: [-15 + Math.cos(a) * r, 0.15, 17 + Math.sin(a) * r],
         color: colors[Math.floor(rand() * colors.length)],
       })
     }
-    return items
-  }, [])
+    return list
+  }, [lite])
 
+  useEffect(() => {
+    const mesh = ref.current
+    const dummy = new THREE.Object3D()
+    const color = new THREE.Color()
+    items.forEach((f, i) => {
+      dummy.position.set(...f.pos)
+      dummy.updateMatrix()
+      mesh.setMatrixAt(i, dummy.matrix)
+      mesh.setColorAt(i, color.set(f.color))
+    })
+    mesh.count = items.length
+    mesh.instanceMatrix.needsUpdate = true
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+  }, [items])
+
+  return (
+    <instancedMesh key={items.length} ref={ref} args={[undefined, undefined, items.length]} frustumCulled={false}>
+      <boxGeometry args={[0.22, 0.3, 0.22]} />
+      <meshLambertMaterial />
+    </instancedMesh>
+  )
+}
+
+const Decorations = memo(function Decorations({ lite }: { lite: boolean }) {
   return (
     <group>
       {/* ---- 木々（位置データはterrainの当たり判定と共有） ---- */}
@@ -152,13 +182,8 @@ function Decorations() {
         <PineTree key={`p${i}`} position={p} />
       ))}
 
-      {/* ---- はな ---- */}
-      {flowers.map((f, i) => (
-        <mesh key={i} position={f.pos}>
-          <boxGeometry args={[0.22, 0.3, 0.22]} />
-          <meshLambertMaterial color={f.color} />
-        </mesh>
-      ))}
+      {/* ---- はな（instancedMeshで1ドローコール） ---- */}
+      <Flowers lite={lite} />
 
       {/* ---- ランドマーク ---- */}
       {/* はじまり広場：ふんすい＋がいとう */}
@@ -218,7 +243,7 @@ function Decorations() {
       <TextSprite text="⛲ はじまりひろば" position={[0, 4.2, 0]} scale={1.5} />
     </group>
   )
-}
+})
 
 // ---------------------------------------------------------------
 // NPC・看板・宝箱
@@ -505,32 +530,52 @@ function TutorialArrows() {
 // ---------------------------------------------------------------
 // けんちくエリアのブロック（ワールドにも表示され、上に乗れる）
 // ---------------------------------------------------------------
+
+// 全ブロック共通のジオメトリと、種類ごとのマテリアルを使い回す
+// （ブロックごとにnewすると、置くたびにGPUリソースが増えていくため）
+const BLOCK_GEOMETRY = new THREE.BoxGeometry(0.96, 0.96, 0.96)
+const blockMaterialCache = new Map<string, THREE.MeshLambertMaterial>()
+function blockMaterial(blockId: string): THREE.MeshLambertMaterial {
+  let mat = blockMaterialCache.get(blockId)
+  if (!mat) {
+    const def = BLOCK_MAP[blockId]
+    mat = new THREE.MeshLambertMaterial({
+      color: def?.color ?? '#ffffff',
+      transparent: blockId === 'glass' || blockId === 'water',
+      opacity: blockId === 'glass' ? 0.55 : blockId === 'water' ? 0.75 : 1,
+    })
+    blockMaterialCache.set(blockId, mat)
+  }
+  return mat
+}
+
 function BuiltBlocks() {
+  // buildLayersはmutateSaveが「内容が変わったときだけ」新しい参照にするので、
+  // コイン増加などでは再レンダリングされない
   const layers = useGameStore((s) => s.save?.buildLayers)
+  const blocks = useMemo(() => {
+    if (!layers) return []
+    const [ox, oz] = BUILD_ORIGIN
+    const list: { key: string; pos: [number, number, number]; blockId: string }[] = []
+    layers.forEach((layer, li) =>
+      layer.forEach((blockId, i) => {
+        if (!blockId || !BLOCK_MAP[blockId]) return
+        list.push({
+          key: `${li}-${i}`,
+          pos: [ox + (i % BUILD_GRID_SIZE), 0.5 + li, oz + Math.floor(i / BUILD_GRID_SIZE)],
+          blockId,
+        })
+      }),
+    )
+    return list
+  }, [layers])
   if (!layers) return null
-  const [ox, oz] = BUILD_ORIGIN
-  const hasAny = layers.some((layer) => layer.some(Boolean))
+  const hasAny = blocks.length > 0
   return (
     <group>
-      {layers.map((layer, li) =>
-        layer.map((blockId, i) => {
-          if (!blockId) return null
-          const def = BLOCK_MAP[blockId]
-          if (!def) return null
-          const x = ox + (i % BUILD_GRID_SIZE)
-          const z = oz + Math.floor(i / BUILD_GRID_SIZE)
-          return (
-            <mesh key={`${li}-${i}`} position={[x, 0.5 + li, z]}>
-              <boxGeometry args={[0.96, 0.96, 0.96]} />
-              <meshLambertMaterial
-                color={def.color}
-                transparent={blockId === 'glass' || blockId === 'water'}
-                opacity={blockId === 'glass' ? 0.55 : blockId === 'water' ? 0.75 : 1}
-              />
-            </mesh>
-          )
-        }),
-      )}
+      {blocks.map((b) => (
+        <mesh key={b.key} position={b.pos} geometry={BLOCK_GEOMETRY} material={blockMaterial(b.blockId)} />
+      ))}
       {/* なにか たてると「じぶんの けんちく」の めじるしが出る */}
       {hasAny && (
         <TextSprite
@@ -548,9 +593,11 @@ function BuiltBlocks() {
 // ワールド全体
 // ---------------------------------------------------------------
 export function WorldCanvas() {
+  // けいりょうモード：解像度を下げ、装飾を減らす
+  const lite = useGameStore((s) => s.settings.liteMode === 'on')
   return (
     <Canvas
-      dpr={[1, 1.5]}
+      dpr={lite ? 1 : [1, 1.5]}
       camera={{ fov: 50, position: [0, 8, 16], near: 0.1, far: 120 }}
       style={{ touchAction: 'none' }}
     >
@@ -559,7 +606,7 @@ export function WorldCanvas() {
       <hemisphereLight args={['#ffffff', '#8fbb6e', 0.95]} />
       <directionalLight position={[12, 20, 8]} intensity={0.75} />
       <Ground />
-      <Decorations />
+      <Decorations lite={lite} />
       {WORLD_NPCS.map((npc) => (
         <NPCFigure key={npc.id} npc={npc} />
       ))}

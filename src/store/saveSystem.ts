@@ -48,6 +48,8 @@ export function createNewSave(name: string, avatar: number): SaveData {
 
 /** スロットからセーブデータを読み込む（なければnull） */
 export function loadSave(slot: SlotId): SaveData | null {
+  // 書き込み待ちのデータがあると古い内容を読んでしまうので、先に書き込む
+  flushSave()
   try {
     const raw = localStorage.getItem(KEY_PREFIX + slot)
     if (!raw) return null
@@ -106,6 +108,36 @@ export function writeSave(slot: SlotId, data: SaveData): void {
   }
 }
 
+// ---- 保存のdebounce ----
+// 連続操作（建築の連打・クエスト連答など）で毎回JSON化＋同期書き込みをしないよう、
+// 少し待ってからまとめて保存する。タブを閉じる直前は flushSave() で確実に書き込む。
+let pendingSave: { slot: SlotId; data: SaveData } | null = null
+let saveTimer: number | null = null
+const SAVE_DELAY_MS = 400
+
+/** 少し待ってから保存する（連続呼び出しは最後の1回だけ書き込まれる） */
+export function scheduleSave(slot: SlotId, data: SaveData): void {
+  pendingSave = { slot, data }
+  if (saveTimer !== null) return
+  saveTimer = window.setTimeout(() => {
+    saveTimer = null
+    flushSave()
+  }, SAVE_DELAY_MS)
+}
+
+/** まだ書き込んでいないセーブを今すぐ書き込む */
+export function flushSave(): void {
+  if (saveTimer !== null) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+  if (pendingSave) {
+    const { slot, data } = pendingSave
+    pendingSave = null
+    writeSave(slot, data)
+  }
+}
+
 /** 「さいごにあそんだ日」の表示用（例: 7/7 19:30）。古い形式はそのまま返す */
 export function formatLastPlayed(raw: string): string {
   const d = new Date(raw)
@@ -116,6 +148,14 @@ export function formatLastPlayed(raw: string): string {
 
 /** スロットのデータを消す */
 export function deleteSave(slot: SlotId): void {
+  // 書き込み待ちが後から復活させないように、同じスロットの保留分は捨てる
+  if (pendingSave?.slot === slot) {
+    pendingSave = null
+    if (saveTimer !== null) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+  }
   localStorage.removeItem(KEY_PREFIX + slot)
 }
 

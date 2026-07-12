@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS: Settings = {
   touchButtons: 'auto',
   sound: 'on',
   furigana: 'on',
+  liteMode: 'off',
 }
 
 /** 端末に保存された設定を読み込む */

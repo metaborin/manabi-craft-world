@@ -28,7 +28,9 @@ import { playSound, soundState } from '../game/sound'
 import {
   createNewSave,
   deleteSave,
+  flushSave,
   loadSave,
+  scheduleSave,
   writeSave,
   todayString,
   type SlotId,
@@ -143,9 +145,41 @@ interface GameState {
 
 let toastId = 0
 
+/** 1次元配列が同じ内容か */
+function sameArray<T>(a: readonly T[], b: readonly T[]): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+  return true
+}
+
+/** 建築レイヤー（2次元配列）が同じ内容か */
+function sameLayers(a: (string | null)[][], b: (string | null)[][]): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) if (!sameArray(a[i], b[i])) return false
+  return true
+}
+
+/** Record<string, number> が同じ内容か */
+function sameRecord(a: Record<string, number>, b: Record<string, number>): boolean {
+  if (a === b) return true
+  const ka = Object.keys(a)
+  const kb = Object.keys(b)
+  if (ka.length !== kb.length) return false
+  for (const k of ka) if (a[k] !== b[k]) return false
+  return true
+}
+
 /**
  * ストア内でセーブデータを変更して自動保存するヘルパー。
  * ここで称号とエリア解放も自動チェックする（変更の通り道が1本なので確実）。
+ *
+ * パフォーマンス上の工夫：
+ * - structuredCloneで全体が新しい参照になるため、そのままだと
+ *   「コインが増えただけ」でも建築ブロックの3D表示などが作り直されてしまう。
+ *   変わっていない配列は元の参照に戻して、不要な再レンダリングを防ぐ。
+ * - localStorageへの書き込みはdebounce（連続操作で毎回書かない）。
  */
 function mutateSave(
   get: () => GameState,
@@ -161,7 +195,19 @@ function mutateSave(
   for (const t of newTitles) next.earnedTitles.push(t.id)
   // エリア解放の自動チェック
   const newAreas = checkAreaUnlocks(next)
-  writeSave(slot, next)
+
+  // 内容が変わっていない配列・オブジェクトは元の参照を使う（3D側の無駄な再描画防止）
+  if (sameLayers(next.buildLayers, save.buildLayers)) next.buildLayers = save.buildLayers
+  if (sameArray(next.unlockedAreas, save.unlockedAreas)) next.unlockedAreas = save.unlockedAreas
+  if (sameArray(next.openedChests, save.openedChests)) next.openedChests = save.openedChests
+  if (sameArray(next.metNPCs, save.metNPCs)) next.metNPCs = save.metNPCs
+  if (sameArray(next.badges, save.badges)) next.badges = save.badges
+  if (sameArray(next.earnedTitles, save.earnedTitles)) next.earnedTitles = save.earnedTitles
+  if (sameArray(next.clearedQuests, save.clearedQuests)) next.clearedQuests = save.clearedQuests
+  if (sameArray(next.items, save.items)) next.items = save.items
+  if (sameRecord(next.blocks, save.blocks)) next.blocks = save.blocks
+
+  scheduleSave(slot, next)
   set({ save: next })
   if (newTitles.length > 0) {
     setTimeout(() => get().showToast(UI.title2.earned), 3400)
@@ -879,6 +925,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   backToTitle: () => {
+    flushSave()
     resetPlayerState()
     set({
       screen: 'title',

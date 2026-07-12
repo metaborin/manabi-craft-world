@@ -82,6 +82,14 @@ export function SettingsScreen() {
               { value: 'off', label: UI.settings.soundOff },
             ]}
           />
+          <SettingRow
+            label={UI.settings.liteMode}
+            settingKey="liteMode"
+            options={[
+              { value: 'off', label: UI.settings.liteOff },
+              { value: 'on', label: UI.settings.liteOn },
+            ]}
+          />
         </div>
         <button className="btn btn-secondary btn-big" onClick={openHelp}>
           {UI.help.open}

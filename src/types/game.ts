@@ -176,10 +176,12 @@ export interface Settings {
   textSize: 'normal' | 'large'
   /** 画面内ボタン（移動パッドなど）の表示 */
   touchButtons: 'auto' | 'on' | 'off'
-  /** 効果音（今は設定のみ。音はフェーズ3で追加） */
+  /** 効果音 */
   sound: 'on' | 'off'
   /** ふりがな表示 */
   furigana: 'on' | 'off'
+  /** けいりょうモード（演出や装飾をへらして軽くする） */
+  liteMode: 'on' | 'off'
 }
 
 export type Screen =

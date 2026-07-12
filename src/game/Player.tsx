@@ -14,6 +14,11 @@ import { UI } from '../data/uiText'
 import { TextSprite } from './TextSprite'
 import type { WorldNPC } from '../types/game'
 
+// 毎フレームnewしないための使い回しベクトル
+const _camTarget = new THREE.Vector3()
+const _petTarget = new THREE.Vector3()
+const _unitScale = new THREE.Vector3(1, 1, 1)
+
 /** プレイヤー（移動・ジャンプ・カメラ追従・ちかくのNPC判定・ペット） */
 export function Player() {
   const group = useRef<THREE.Group>(null!)
@@ -173,18 +178,19 @@ export function Player() {
         squash.current -= delta
         body.current.scale.set(1.12, 0.82, 1.12)
       } else {
-        body.current.scale.lerp(new THREE.Vector3(1, 1, 1), Math.min(1, delta * 14))
+        body.current.scale.lerp(_unitScale, Math.min(1, delta * 14))
       }
     }
 
     // 位置を覚えておく（建築・ショップから戻っても同じ場所）
     playerState.pos = [g.position.x, 0, g.position.z]
 
-    // チュートリアル①：すこし歩いたら達成
-    if (moveSpeed > 0.4) {
+    // チュートリアル①：すこし歩いたら達成（一度呼んだら以後は判定しない）
+    if (walkedDistance.current >= 0 && moveSpeed > 0.4) {
       walkedDistance.current += moveSpeed * delta
       if (walkedDistance.current > 2.5) {
         useGameStore.getState().advanceTutorial(0)
+        walkedDistance.current = -1
       }
     }
 
@@ -198,12 +204,12 @@ export function Player() {
 
     // カメラ追従（急に動かないようゆっくり追いかける）
     const dist = 10.5
-    const camTarget = new THREE.Vector3(
+    _camTarget.set(
       g.position.x + Math.sin(yaw) * dist,
       g.position.y + 7,
       g.position.z + Math.cos(yaw) * dist,
     )
-    camera.position.lerp(camTarget, 1 - Math.exp(-delta * 6))
+    camera.position.lerp(_camTarget, 1 - Math.exp(-delta * 6))
     camera.lookAt(g.position.x, g.position.y + 1.2, g.position.z)
 
     // ちかくのNPCをさがす
@@ -240,12 +246,12 @@ export function Player() {
     // ペットがついてくる＆正解するとよろこぶ
     if (petRef.current) {
       const p = petRef.current
-      const behind = new THREE.Vector3(
+      _petTarget.set(
         g.position.x - vel.current.x * 0.28 - 1.0,
-        0,
+        p.position.y,
         g.position.z - vel.current.z * 0.28 + 0.6,
       )
-      p.position.lerp(behind, Math.min(1, delta * 3))
+      p.position.lerp(_petTarget, Math.min(1, delta * 3))
       // ペットも地面の高さにあわせてふわふわ（ブロックの上にもついてくる）
       const petGroundH = sampleGround(p.position.x, p.position.z, buildLayers).height
       const celebrating = performance.now() < petMood.celebrateUntil
