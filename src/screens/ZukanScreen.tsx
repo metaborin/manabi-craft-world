@@ -1,6 +1,7 @@
 import { useGameStore } from '../store/gameStore'
 import { BLOCKS, BADGES, PET_MAP, petLevel, petStage } from '../data/rewards'
 import { CHARACTER_NPCS, TREASURE_COUNT } from '../data/world'
+import { ALL_AREAS } from '../data/areas'
 import { SUBJECTS } from '../data/grades'
 import { AVATARS } from '../data/avatars'
 import { UI } from '../data/uiText'
@@ -140,6 +141,25 @@ export function ZukanScreen() {
             <div className="status-sub">{UI.status.noPet}</div>
           )}
           <div className="status-sub">{UI.mission.totalDone(save.totalMissionsCompleted)}</div>
+        </div>
+
+        {/* エリア */}
+        <div className="status-card">
+          <div className="status-row-label">
+            {UI.area.zukanSection}（
+            {ALL_AREAS.filter((a) => save.unlockedAreas.includes(a.id)).length}／{ALL_AREAS.length}）
+          </div>
+          <div className="zukan-grid">
+            {ALL_AREAS.map((a) => {
+              const unlocked = save.unlockedAreas.includes(a.id)
+              return (
+                <div key={a.id} className={`zukan-item ${unlocked ? 'got' : ''}`}>
+                  <span className="zukan-chest">{unlocked ? a.icon : '🔒'}</span>
+                  <span className="zukan-name">{unlocked ? a.name : UI.zukan.unknown}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* アバター */}

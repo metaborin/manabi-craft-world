@@ -1,6 +1,17 @@
 import { useGameStore } from '../store/gameStore'
 import { GRADES, SUBJECTS } from '../data/grades'
-import { BADGES, BLOCKS, PET_MAP, petLevel, petStage, petNextStage, xpForLevel } from '../data/rewards'
+import {
+  BADGES,
+  BLOCKS,
+  PET_ABILITIES,
+  PET_MAP,
+  petLevel,
+  petStage,
+  petNextStage,
+  TITLES,
+  TITLE_MAP,
+  xpForLevel,
+} from '../data/rewards'
 import { getQuestions } from '../data/questions'
 import { AVATARS } from '../data/avatars'
 import { TREASURE_COUNT } from '../data/world'
@@ -10,7 +21,10 @@ export function StatusScreen() {
   const save = useGameStore((s) => s.save)
   const setScreen = useGameStore((s) => s.setScreen)
   const backToTitle = useGameStore((s) => s.backToTitle)
+  const setTitle = useGameStore((s) => s.setTitle)
   if (!save) return null
+
+  const currentTitle = TITLE_MAP[save.currentTitle]
 
   const needXp = xpForLevel(save.level)
   const subjects = GRADES[save.grade].mainSubjects
@@ -37,6 +51,11 @@ export function StatusScreen() {
           </span>
           <div className="status-player-info">
             <div className="status-name">{save.name}</div>
+            {currentTitle && (
+              <div className="status-title-chip">
+                {currentTitle.icon} {currentTitle.name}
+              </div>
+            )}
             <div className="status-grade-row">
               <span>{GRADES[save.grade].label}</span>
               <button className="btn btn-chip" onClick={() => setScreen('grade')}>
@@ -124,6 +143,31 @@ export function StatusScreen() {
           </div>
         </div>
 
+        {/* しょうごう */}
+        <div className="status-card">
+          <div className="status-row-label">
+            🎖️ {UI.title2.label}（{save.earnedTitles.length}／{TITLES.length}）
+          </div>
+          <div className="title-row">
+            {TITLES.map((t) => {
+              const earned = save.earnedTitles.includes(t.id)
+              const current = save.currentTitle === t.id
+              return (
+                <button
+                  key={t.id}
+                  className={`title-chip ${current ? 'current' : ''} ${earned ? '' : 'locked'}`}
+                  disabled={!earned}
+                  onClick={() => setTitle(t.id)}
+                  title={t.desc}
+                >
+                  {earned ? `${t.icon} ${t.name}` : `❓ ${t.desc}`}
+                </button>
+              )
+            })}
+          </div>
+          <div className="status-sub">タップすると なのる しょうごうを かえられるよ</div>
+        </div>
+
         {/* ペット */}
         <div className="status-card">
           <div className="status-row-label">ペット</div>
@@ -156,6 +200,20 @@ export function StatusScreen() {
                   <div className="status-sub">{UI.pet.grownUp}</div>
                 )
               })()}
+              {/* ペットのとくぎ */}
+              <div className="status-row-label">{UI.petAbility.heading}</div>
+              {PET_ABILITIES.map((a) => {
+                const lv = petLevel(save.pet!.growth)
+                const unlocked = lv >= a.level
+                return (
+                  <div key={a.level} className={`pet-ability ${unlocked ? '' : 'locked'}`}>
+                    <span>{unlocked ? a.icon : '🔒'}</span>
+                    <span>
+                      Lv.{a.level}　{unlocked ? a.desc : UI.petAbility.lockedAt(a.level)}
+                    </span>
+                  </div>
+                )
+              })}
             </>
           ) : (
             <div className="status-sub">まだ いないよ。ショップで たまごを かってみよう🥚</div>

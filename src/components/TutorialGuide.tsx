@@ -1,7 +1,8 @@
 import { useGameStore } from '../store/gameStore'
 import { GRADES, SUBJECTS } from '../data/grades'
-import { petExpToNext } from '../data/rewards'
+import { petExpToNext, petLevel } from '../data/rewards'
 import { missionsForDate, missionClaimed, missionDone, missionProgress } from '../data/missions'
+import { UNLOCKABLE_AREAS } from '../data/areas'
 import { todayString } from '../store/saveSystem'
 import { UI } from '../data/uiText'
 import type { Subject } from '../types/game'
@@ -14,12 +15,13 @@ function todaysSubject(grade: number): Subject {
 
 /**
  * ワールド画面の上部に出す「つぎにすること」の案内。
- * はじめてのプレイではチュートリアル（6ステップ）を表示し、
- * おわったあとは きょうのミッションに合わせた目標を表示する。
- * バナーをタップするとミッション画面が開く。
+ * はじめてのプレイではチュートリアル（8ステップ）を表示し、
+ * おわったあとは ミッション → エリア解放 の順で目標を出す。
+ * ペットがレベル3になると、ペットがヒントをくれる形になる。
  */
 export function TutorialGuide() {
   const save = useGameStore((s) => s.save)
+  const petSense = useGameStore((s) => s.petSense)
   const setScreen = useGameStore((s) => s.setScreen)
   if (!save) return null
 
@@ -39,10 +41,11 @@ export function TutorialGuide() {
     )
   }
 
-  // チュートリアル後：ミッションにあわせた「つぎにすること」
+  // チュートリアル後：ミッション → エリア解放 → じゆうにあそぶ
   const missions = missionsForDate(todayString())
   const claimable = missions.find((m) => missionDone(save, m) && !missionClaimed(save, m))
   const nextMission = missions.find((m) => !missionDone(save, m))
+  const nextArea = UNLOCKABLE_AREAS.find((a) => !save.unlockedAreas.includes(a.id))
 
   let action: string
   if (save.pet && petExpToNext(save.pet.growth) <= 2) {
@@ -51,9 +54,15 @@ export function TutorialGuide() {
     action = 'ミッション たっせい！🎁 ここを タップして うけとろう'
   } else if (nextMission) {
     action = `${nextMission.title}（${UI.mission.left(nextMission.goal - missionProgress(save, nextMission))}）`
+  } else if (nextArea) {
+    action = `${nextArea.icon} ${UI.area.soon} ${nextArea.remainingHint(save) ?? ''}`
   } else {
     action = 'きょうの ミッション ぜんぶクリア！🌟 じゆうに あそぼう'
   }
+
+  // ペットがレベル3なら、ペットがおしえてくれる
+  const petHints = save.pet && petLevel(save.pet.growth) >= 3
+  if (petHints) action = `${UI.petAbility.hintPrefix}${action}`
 
   const rec = todaysSubject(save.grade)
   return (
@@ -62,10 +71,11 @@ export function TutorialGuide() {
         className={`guide-banner guide-clickable ${claimable ? 'guide-ready' : ''}`}
         onClick={() => setScreen('mission')}
       >
-        <span className="guide-icon">🎯</span>
+        <span className="guide-icon">{petHints ? '🐾' : '🎯'}</span>
         <span className="guide-text">{action}</span>
         <span className="guide-open">▶</span>
       </button>
+      {petSense && <span className="daily-rec pet-sense">{UI.petAbility.sense}</span>}
       <span className="daily-rec">
         {UI.world.todaysRec}
         {SUBJECTS[rec].icon} {SUBJECTS[rec].name}

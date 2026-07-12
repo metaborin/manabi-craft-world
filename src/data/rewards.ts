@@ -215,6 +215,88 @@ export const BADGES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
     icon: '📐',
     check: (s) => (s.stats.templatesUsed ?? 0) >= 1,
   },
+  {
+    id: 'days-3',
+    name: '3日 あそんだよ',
+    desc: '3日 あそびに きてくれた',
+    icon: '📅',
+    check: (s) => (s.playDays ?? 0) >= 3,
+  },
+  {
+    id: 'allmission-1',
+    name: 'きょうの ぜんぶクリア',
+    desc: 'きょうの ミッションを ぜんぶ たっせいした',
+    icon: '🌟',
+    check: (s) => (s.allMissionDays ?? 0) >= 1,
+  },
+  {
+    id: 'pet-lv5',
+    name: 'ペットマスター',
+    desc: 'ペットが レベル5に なった',
+    icon: '👑',
+    check: (s) => (s.pet ? petLevel(s.pet.growth) >= 5 : false),
+  },
+]
+
+/**
+ * 称号。じょうけんをみたすと もらえて、ステータスで なのれる。
+ */
+export const TITLES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
+  {
+    id: 'egg',
+    name: 'まなびの たまご',
+    desc: 'ぼうけんの はじまり',
+    icon: '🥚',
+    check: () => true,
+  },
+  {
+    id: 'explorer',
+    name: 'ひろばの たんけんか',
+    desc: 'たからばこを 3こ あけた',
+    icon: '🗺️',
+    check: (s) => (s.openedChests?.length ?? 0) >= 3,
+  },
+  {
+    id: 'builder',
+    name: 'ブロックビルダー',
+    desc: 'ブロックを 20こ おいた',
+    icon: '🏗️',
+    check: (s) => s.stats.blocksPlaced >= 20,
+  },
+  {
+    id: 'petfriend',
+    name: 'ペットフレンド',
+    desc: 'ペットが レベル3に なった',
+    icon: '🐾',
+    check: (s) => (s.pet ? petLevel(s.pet.growth) >= 3 : false),
+  },
+  {
+    id: 'kotoba',
+    name: 'ことばの みならい',
+    desc: 'こくごを 5もん クリアした',
+    icon: '📖',
+    check: (s) => (s.stats.bySubject.kokugo?.cleared ?? 0) >= 5,
+  },
+  {
+    id: 'kazu',
+    name: 'かずの みならい',
+    desc: 'さんすうを 5もん クリアした',
+    icon: '🔢',
+    check: (s) => (s.stats.bySubject.sansu?.cleared ?? 0) >= 5,
+  },
+]
+
+export const TITLE_MAP: Record<string, BadgeDef> = Object.fromEntries(
+  TITLES.map((t) => [t.id, t]),
+)
+
+/** ペットのレベルでふえる とくぎ */
+export const PET_ABILITIES: { level: number; icon: string; desc: string }[] = [
+  { level: 1, icon: '🚶', desc: 'いっしょに ぼうけんに ついてくる' },
+  { level: 2, icon: '👃', desc: 'ちかくの たからばこの けはいを かんじる' },
+  { level: 3, icon: '💡', desc: '「つぎにすること」を おしえてくれる' },
+  { level: 4, icon: '🪙', desc: 'クエストのあと コインを 2まい ひろってくる' },
+  { level: 5, icon: '👑', desc: 'とくべつな バッジを くれる' },
 ]
 
 /** レベルアップに必要な経験値 */

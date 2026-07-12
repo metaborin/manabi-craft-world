@@ -38,6 +38,11 @@ export function createNewSave(name: string, avatar: number): SaveData {
     metNPCs: [],
     daily: { date: todayString(), counters: {}, claimed: [], bonusClaimed: false },
     totalMissionsCompleted: 0,
+    storyProgress: 0,
+    earnedTitles: ['egg'],
+    currentTitle: 'egg',
+    playDays: 1,
+    allMissionDays: 0,
   }
 }
 
@@ -48,10 +53,11 @@ export function loadSave(slot: SlotId): SaveData | null {
     if (!raw) return null
     const data = JSON.parse(raw) as SaveData
     if (data.version !== 1) return null
-    // 日付が変わっていたら「きょうのカウント」をリセット
+    // 日付が変わっていたら「きょうのカウント」をリセット＆あそんだ日数+1
     if (data.dailyDate !== todayString()) {
       data.dailyDate = todayString()
       data.dailyCount = 0
+      data.playDays = (data.playDays ?? 1) + 1
     }
     // フェーズ1のセーブにはチュートリアル項目がないので補完する
     // （すでに問題に答えたことがある子はチュートリアル済みとみなす）
@@ -68,6 +74,12 @@ export function loadSave(slot: SlotId): SaveData | null {
       data.daily = { date: todayString(), counters: {}, claimed: [], bonusClaimed: false }
     }
     data.totalMissionsCompleted ??= 0
+    // フェーズ3.0：ストーリー・称号・日数を補完（古いセーブはオープニングをスキップ）
+    data.storyProgress ??= data.stats.answered > 0 ? 1 : 0
+    data.earnedTitles ??= ['egg']
+    data.currentTitle ??= 'egg'
+    data.playDays ??= 1
+    data.allMissionDays ??= 0
     // フェーズ2.8：建築を3段レイヤーに拡張。旧buildGrid（1段）は1だんめに変換
     if (!data.buildLayers) {
       data.buildLayers = emptyBuildLayers()

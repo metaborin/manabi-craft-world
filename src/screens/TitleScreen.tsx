@@ -127,6 +127,7 @@ function TitleBackground() {
 
 export function TitleScreen() {
   const openSettings = useGameStore((s) => s.openSettings)
+  const openHelp = useGameStore((s) => s.openHelp)
   return (
     <div className="screen title-screen">
       <TitleBackground />
@@ -144,9 +145,14 @@ export function TitleScreen() {
           <SlotCard slot={1} />
           <SlotCard slot={2} />
         </div>
-        <button className="btn btn-ghost" onClick={openSettings}>
-          {UI.title.settings}
-        </button>
+        <div className="bottom-row">
+          <button className="btn btn-ghost" onClick={openSettings}>
+            {UI.title.settings}
+          </button>
+          <button className="btn btn-ghost" onClick={openHelp}>
+            {UI.help.open}
+          </button>
+        </div>
         <p className="title-note">{UI.title.saveNote}</p>
       </div>
     </div>

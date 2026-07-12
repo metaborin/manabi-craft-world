@@ -1928,6 +1928,238 @@ ruby rt {
   padding: 4px 0;
 }
 
+/* ============ フェーズ3.0：ストーリー・エリア解放・称号・ヘルプ ============ */
+
+/* オープニングのおはなし */
+.story-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(#5b8fb5, #2e5877);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+  padding: 16px;
+}
+.story-card {
+  background: var(--cream);
+  border-radius: 26px;
+  padding: 36px 30px;
+  width: min(520px, 94vw);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  box-shadow: 0 14px 50px rgba(0, 0, 0, 0.4);
+  animation: pop 0.35s;
+}
+.story-icon {
+  font-size: 64px;
+  animation: block-float 3s ease-in-out infinite;
+}
+.story-text {
+  font-size: 20px;
+  line-height: 2;
+  font-weight: bold;
+}
+.story-dots {
+  display: flex;
+  gap: 8px;
+}
+.story-dots .dot {
+  background: #d8c9b8;
+}
+.story-dots .dot.now {
+  background: var(--orange);
+  outline: none;
+}
+.story-dots .dot.done {
+  background: #b3a494;
+}
+
+/* エリア解放のお祝い */
+.unlock-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(46, 63, 87, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 350;
+}
+.unlock-card {
+  position: relative;
+  background: var(--cream);
+  border-radius: 26px;
+  padding: 34px 44px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 14px 50px rgba(0, 0, 0, 0.4);
+  animation: pop 0.4s;
+  overflow: hidden;
+}
+.unlock-rays {
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(
+    #fff3b0 0 12deg, transparent 12deg 30deg,
+    #fff3b0 30deg 42deg, transparent 42deg 60deg,
+    #fff3b0 60deg 72deg, transparent 72deg 90deg,
+    #fff3b0 90deg 102deg, transparent 102deg 120deg,
+    #fff3b0 120deg 132deg, transparent 132deg 150deg,
+    #fff3b0 150deg 162deg, transparent 162deg 180deg,
+    #fff3b0 180deg 192deg, transparent 192deg 210deg,
+    #fff3b0 210deg 222deg, transparent 222deg 240deg,
+    #fff3b0 240deg 252deg, transparent 252deg 270deg,
+    #fff3b0 270deg 282deg, transparent 282deg 300deg,
+    #fff3b0 300deg 312deg, transparent 312deg 330deg,
+    #fff3b0 330deg 342deg, transparent 342deg 360deg
+  );
+  opacity: 0.5;
+  animation: rays-spin 14s linear infinite;
+  pointer-events: none;
+}
+@keyframes rays-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.unlock-banner {
+  position: relative;
+  background: var(--orange);
+  color: #fff;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 8px 24px;
+  font-size: 18px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+.unlock-icon {
+  position: relative;
+  font-size: 70px;
+  animation: pop 0.6s;
+}
+.unlock-name {
+  position: relative;
+  font-size: 28px;
+  font-weight: bold;
+}
+.unlock-card .btn {
+  position: relative;
+}
+
+/* しょうごう */
+.status-title-chip {
+  display: inline-block;
+  background: #fff3d6;
+  border: 2px solid #ffd54f;
+  border-radius: 999px;
+  padding: 2px 12px;
+  font-size: 13px;
+  font-weight: bold;
+  margin: 2px 0;
+}
+.title-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.title-chip {
+  background: #fff;
+  border: 3px solid #d8c9b8;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--brown);
+}
+.title-chip.current {
+  border-color: var(--orange);
+  background: #fff9e0;
+}
+.title-chip.locked {
+  opacity: 0.55;
+  font-size: 12px;
+}
+
+/* ペットのとくぎ */
+.pet-ability {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+  background: var(--cream);
+  border-radius: 12px;
+  padding: 6px 12px;
+}
+.pet-ability.locked {
+  opacity: 0.55;
+}
+
+/* ペットの宝箱センサー */
+.daily-rec.pet-sense {
+  background: #fff3d6;
+  border: 2px solid #ffd54f;
+  font-weight: bold;
+  animation: pulse 1.2s infinite alternate;
+}
+
+/* ヘルプ */
+.help-card {
+  gap: 6px;
+}
+.help-q {
+  font-weight: bold;
+  font-size: 17px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.help-q-icon {
+  background: var(--orange);
+  color: #fff;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.help-a {
+  font-size: 15px;
+  line-height: 1.9;
+  color: #6b5849;
+}
+.teacher-card {
+  background: #eef4f8;
+}
+.teacher-text {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #4a5a66;
+}
+
+/* ショップのおすすめ */
+.shop-item.recommended {
+  border: 3px solid #ffd54f;
+  background: #fffbe8;
+}
+.shop-recommend-chip {
+  background: linear-gradient(90deg, #ffd54f, var(--orange));
+  color: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 3px 10px;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.15);
+}
+
 /* ---- ホバー演出（マウス端末のみ） ---- */
 @media (hover: hover) {
   .btn {

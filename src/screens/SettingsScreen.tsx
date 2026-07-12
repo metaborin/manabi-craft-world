@@ -35,6 +35,7 @@ function SettingRow<K extends keyof Settings>({
 
 export function SettingsScreen() {
   const closeSettings = useGameStore((s) => s.closeSettings)
+  const openHelp = useGameStore((s) => s.openHelp)
 
   return (
     <div className="screen panel-screen">
@@ -82,6 +83,9 @@ export function SettingsScreen() {
             ]}
           />
         </div>
+        <button className="btn btn-secondary btn-big" onClick={openHelp}>
+          {UI.help.open}
+        </button>
         <p className="hint-text center">{UI.settings.note}</p>
       </div>
     </div>

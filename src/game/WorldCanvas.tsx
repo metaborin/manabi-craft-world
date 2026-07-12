@@ -5,6 +5,7 @@ import { useGameStore } from '../store/gameStore'
 import { WORLD_HALF, WORLD_NPCS, BUILD_GRID_SIZE, BUILD_ORIGIN, TREE_POSITIONS } from '../data/world'
 import { BLOCK_MAP } from '../data/rewards'
 import { GRADES } from '../data/grades'
+import { UNLOCKABLE_AREAS, NPC_AREA } from '../data/areas'
 import { todayString } from '../store/saveSystem'
 import { TextSprite } from './TextSprite'
 import { Player } from './Player'
@@ -231,8 +232,14 @@ function NPCFigure({ npc }: { npc: WorldNPC }) {
     [npc.color],
   )
 
+  // ロック中エリアの せんせいは 🔒つきラベルにする
+  const areaLocked = useGameStore((s) => {
+    const area = NPC_AREA[npc.id]
+    return !!area && !!s.save && !s.save.unlockedAreas.includes(area.id)
+  })
+
   useFrame(({ clock }) => {
-    if (group.current && npc.kind === 'quest') {
+    if (group.current && (npc.kind === 'quest' || npc.kind === 'guide')) {
       group.current.position.y = Math.sin(clock.elapsedTime * 2 + phase) * 0.06
     }
   })
@@ -286,14 +293,82 @@ function NPCFigure({ npc }: { npc: WorldNPC }) {
           <meshBasicMaterial color="#3a3a3a" />
         </mesh>
       </group>
-      {/* ちかづくと 吹き出しが出る */}
+      {/* ちかづくと 吹き出しが出る（ロック中は🔒） */}
       {isNear ? (
-        <TextSprite text={`💬 ${npc.label}`} position={[0, 2.2, 0]} scale={1.05} bg="rgba(255,249,224,0.97)" />
+        <TextSprite
+          text={areaLocked ? `🔒 ${npc.label}` : `💬 ${npc.label}`}
+          position={[0, 2.2, 0]}
+          scale={1.05}
+          bg="rgba(255,249,224,0.97)"
+        />
       ) : (
-        <TextSprite text={npc.label} position={[0, 2.15, 0]} scale={1.0} />
+        <TextSprite text={areaLocked ? `🔒 ${npc.label}` : npc.label} position={[0, 2.15, 0]} scale={1.0} />
       )}
       {isNear && <NearRing />}
     </group>
+  )
+}
+
+// ---------------------------------------------------------------
+// エリア解放：ロック中のゲートと、解放後のとくべつひろば
+// ---------------------------------------------------------------
+function AreaGates() {
+  const unlockedAreas = useGameStore((s) => s.save?.unlockedAreas)
+  if (!unlockedAreas) return null
+  return (
+    <>
+      {UNLOCKABLE_AREAS.map((a) => {
+        if (unlockedAreas.includes(a.id)) return null
+        return (
+          <group key={a.id} position={a.gatePos}>
+            {/* ロックのゲート（とおりぬけはできる。じゃまはしない） */}
+            {[-1.1, 1.1].map((x) => (
+              <mesh key={x} position={[x, 1, 0]}>
+                <boxGeometry args={[0.3, 2, 0.3]} />
+                <meshLambertMaterial color="#9aa0a6" />
+              </mesh>
+            ))}
+            <mesh position={[0, 2.1, 0]}>
+              <boxGeometry args={[2.5, 0.3, 0.3]} />
+              <meshLambertMaterial color="#9aa0a6" />
+            </mesh>
+            <mesh position={[0, 1.1, 0]}>
+              <boxGeometry args={[0.7, 0.8, 0.25]} />
+              <meshLambertMaterial color="#e8b93e" />
+            </mesh>
+            <TextSprite text={`🔒 ${a.icon} ${a.name}`} position={[0, 3, 0]} scale={1.1} />
+            <TextSprite
+              text={a.conditionText}
+              position={[0, 2.5, 0]}
+              scale={0.75}
+              bg="rgba(255,255,255,0.85)"
+            />
+          </group>
+        )
+      })}
+      {/* とくべつひろば（解放されると にじのアーチと ほしの柱があらわれる） */}
+      {unlockedAreas.includes('tokubetsu') && (
+        <group position={[-15, 0, 17]}>
+          {['#e57373', '#ffd54f', '#81c784', '#64b5f6', '#ba68c8'].map((c, i) => (
+            <mesh key={i} position={[0, 2.6 + i * 0.28, 0]} rotation={[0, 0.4, 0]}>
+              <boxGeometry args={[5 - i * 0.7, 0.26, 0.3]} />
+              <meshLambertMaterial color={c} />
+            </mesh>
+          ))}
+          {[-2.2, 2.2].map((x) => (
+            <mesh key={x} position={[x * Math.cos(0.4), 1.3, -x * Math.sin(0.4)]} rotation={[0, 0.4, 0]}>
+              <boxGeometry args={[0.35, 2.6, 0.35]} />
+              <meshLambertMaterial color="#fdf6e9" />
+            </mesh>
+          ))}
+          <mesh position={[0, 3.9, 0]} rotation={[0, 0, Math.PI / 4]}>
+            <boxGeometry args={[0.5, 0.5, 0.3]} />
+            <meshBasicMaterial color="#ffd54f" />
+          </mesh>
+          <TextSprite text="🌈 とくべつひろば" position={[0, 4.8, 0]} scale={1.3} bg="rgba(255,249,224,0.95)" />
+        </group>
+      )}
+    </>
   )
 }
 
@@ -391,12 +466,16 @@ function BouncingArrow({ position }: { position: [number, number, number] }) {
 function TutorialArrows() {
   const step = useGameStore((s) => (s.save && !s.save.tutorialDone ? s.save.tutorialStep : null))
   const grade = useGameStore((s) => s.save?.grade ?? 1)
+  const openedChests = useGameStore((s) => s.save?.openedChests)
   if (step === null) return null
 
   const targets: WorldNPC[] = []
   if (step === 1 || step === 2) {
-    const sign = WORLD_NPCS.find((n) => n.id === 'sign-welcome')
-    if (sign) targets.push(sign)
+    // かんばんと ナビちゃん
+    for (const id of ['sign-welcome', 'npc-guide']) {
+      const npc = WORLD_NPCS.find((n) => n.id === id)
+      if (npc) targets.push(npc)
+    }
   } else if (step === 3 || step === 4) {
     const subjects = GRADES[grade].mainSubjects
     for (const npc of WORLD_NPCS) {
@@ -407,6 +486,11 @@ function TutorialArrows() {
   } else if (step === 5) {
     const build = WORLD_NPCS.find((n) => n.id === 'npc-build')
     if (build) targets.push(build)
+  } else if (step === 7) {
+    // まだあけていない たからばこ
+    for (const npc of WORLD_NPCS) {
+      if (npc.kind === 'treasure' && !openedChests?.includes(npc.id)) targets.push(npc)
+    }
   }
 
   return (
@@ -479,6 +563,7 @@ export function WorldCanvas() {
       {WORLD_NPCS.map((npc) => (
         <NPCFigure key={npc.id} npc={npc} />
       ))}
+      <AreaGates />
       <TutorialArrows />
       <BuiltBlocks />
       <Player />

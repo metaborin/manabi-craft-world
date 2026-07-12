@@ -137,6 +137,16 @@ export interface SaveData {
   daily: DailyState
   /** これまでに達成したミッションの合計 */
   totalMissionsCompleted: number
+  /** オープニングを見たか（0=まだ / 1=見た） */
+  storyProgress: number
+  /** 手に入れた称号のID */
+  earnedTitles: string[]
+  /** いま名乗っている称号のID */
+  currentTitle: string
+  /** あそんだ日数（日付が変わるたび+1） */
+  playDays: number
+  /** きょうのミッションを全部クリアした日数 */
+  allMissionDays: number
 }
 
 /** きょうのミッション・ボーナスの状態 */
@@ -184,11 +194,12 @@ export type Screen =
   | 'zukan'
   | 'avatar'
   | 'mission'
+  | 'help'
 
 /** ワールド内で話しかけられるもの（NPC・看板・宝箱など） */
 export interface WorldNPC {
   id: string
-  kind: 'quest' | 'shop' | 'build' | 'sign' | 'chest' | 'treasure'
+  kind: 'quest' | 'shop' | 'build' | 'sign' | 'chest' | 'treasure' | 'guide'
   subject?: Subject
   label: string
   /** 話しかけたときのセリフ（sign用） */

@@ -22,6 +22,11 @@ export function ShopScreen() {
 
   const blocks = BLOCKS.filter((b) => b.category === (tab === 'block' ? 'block' : 'deco'))
 
+  // きょうのおすすめ（日付でかわる。買えるブロックの中から1つ）
+  const buyable = BLOCKS.filter((b) => b.inShop)
+  const dayNum = Math.floor(Date.now() / 86400000)
+  const recommendedId = buyable[dayNum % buyable.length]?.id
+
   return (
     <div className="screen panel-screen">
       <div className="panel-header">
@@ -54,7 +59,10 @@ export function ShopScreen() {
             {blocks.map((b) => {
               const affordable = save.coins >= b.price
               return (
-                <div key={b.id} className="shop-item">
+                <div key={b.id} className={`shop-item ${b.id === recommendedId ? 'recommended' : ''}`}>
+                  {b.id === recommendedId && (
+                    <span className="shop-recommend-chip">{UI.shop2.recommended}</span>
+                  )}
                   <span className="palette-swatch big" style={{ background: b.color }} />
                   <span className="shop-name">
                     {b.emoji} {b.name}
@@ -85,6 +93,7 @@ export function ShopScreen() {
         {/* ペット */}
         {tab === 'pet' && (
           <>
+            <p className="hint-text center">{UI.shop2.comingSoonPet}</p>
             <div className="status-row-label">{UI.shop.petSection}</div>
             <div className="shop-grid">
               {PETS.map((p) => {

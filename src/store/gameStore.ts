@@ -11,7 +11,8 @@ import type {
 } from '../types/game'
 import { getQuestions } from '../data/questions'
 import { SUBJECTS } from '../data/grades'
-import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, petLevel, xpForLevel } from '../data/rewards'
+import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, petLevel, TITLES, xpForLevel } from '../data/rewards'
+import { checkAreaUnlocks, NPC_AREA, type AreaDef } from '../data/areas'
 import { missionsForDate, missionClaimed, missionDone } from '../data/missions'
 import { BUILD_TEMPLATES, templateCost, templateCell } from '../data/templates'
 import {
@@ -75,6 +76,12 @@ interface GameState {
   dialog: { npc: WorldNPC; index: number } | null
   /** 報酬などの演出イベント（FxOverlayが拾って表示する） */
   fx: { id: number; type: FxType; text?: string } | null
+  /** エリア解放のお祝い表示 */
+  areaUnlock: AreaDef | null
+  /** ペットが近くの宝箱を感じているか（レベル2のとくぎ） */
+  petSense: boolean
+  /** おはなしをもういちど見るモード */
+  storyReplay: boolean
   /** 画面に一時的に出すメッセージ */
   toast: { id: number; text: string } | null
   /** 「はじめから」でスロットを選んだ直後か（名前入力→学年選択に進む用） */
@@ -83,6 +90,7 @@ interface GameState {
 
   setScreen: (s: Screen) => void
   openSettings: () => void
+  openHelp: () => void
   closeSettings: () => void
   updateSettings: (patch: Partial<Settings>) => void
   selectSlot: (slot: SlotId) => void
@@ -119,6 +127,14 @@ interface GameState {
   claimMission: (missionId: string) => void
   /** 1日1回の「ようこそボーナス」 */
   grantDailyWelcome: () => void
+  dismissAreaUnlock: () => void
+  setPetSense: (v: boolean) => void
+  /** オープニングを見おわった */
+  finishStory: () => void
+  /** おはなしをもういちど見る */
+  replayStory: () => void
+  /** 称号をつけかえる */
+  setTitle: (titleId: string) => void
   showToast: (text: string) => void
   backToTitle: () => void
   /** チュートリアルを1つ進める（stepが一致するときだけ） */
@@ -127,7 +143,10 @@ interface GameState {
 
 let toastId = 0
 
-/** ストア内でセーブデータを変更して自動保存するヘルパー */
+/**
+ * ストア内でセーブデータを変更して自動保存するヘルパー。
+ * ここで称号とエリア解放も自動チェックする（変更の通り道が1本なので確実）。
+ */
 function mutateSave(
   get: () => GameState,
   set: (p: Partial<GameState>) => void,
@@ -137,8 +156,29 @@ function mutateSave(
   if (!save || !slot) return
   const next = structuredClone(save)
   fn(next)
+  // 称号の自動獲得
+  const newTitles = TITLES.filter((t) => !next.earnedTitles.includes(t.id) && t.check(next))
+  for (const t of newTitles) next.earnedTitles.push(t.id)
+  // エリア解放の自動チェック
+  const newAreas = checkAreaUnlocks(next)
   writeSave(slot, next)
   set({ save: next })
+  if (newTitles.length > 0) {
+    setTimeout(() => get().showToast(UI.title2.earned), 3400)
+  }
+  if (newAreas.length > 0) {
+    // 1つめは大きなお祝い、2つめ以降はトーストで知らせる
+    setTimeout(() => {
+      set({ areaUnlock: newAreas[0] })
+      playSound('levelup')
+    }, 1000)
+    for (let i = 1; i < newAreas.length; i++) {
+      setTimeout(
+        () => get().showToast(`${newAreas[i].icon} ${newAreas[i].name}も ひらいたよ！`),
+        4000 + i * 2000,
+      )
+    }
+  }
 }
 
 /** 経験値を加えてレベルアップ処理。レベルが上がったらtrue */
@@ -220,14 +260,23 @@ export const useGameStore = create<GameState>((set, get) => ({
   quest: null,
   dialog: null,
   fx: null,
+  areaUnlock: null,
+  petSense: false,
+  storyReplay: false,
   toast: null,
   isNewGame: false,
   buildSelection: null,
   buildMode: 'place',
 
-  setScreen: (s) => set({ screen: s }),
+  setScreen: (s) => {
+    set({ screen: s })
+    // チュートリアル⑦：ミッションを ひらいた
+    if (s === 'mission') get().advanceTutorial(6)
+  },
 
   openSettings: () => set({ settingsReturn: get().screen, screen: 'settings' }),
+
+  openHelp: () => set({ settingsReturn: get().screen, screen: 'help' }),
 
   closeSettings: () => set({ screen: get().settingsReturn }),
 
@@ -295,7 +344,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // 図鑑用：キャラクターNPCに会った記録
     if (
-      (nearby.kind === 'quest' || nearby.kind === 'shop' || nearby.kind === 'build') &&
+      (nearby.kind === 'quest' ||
+        nearby.kind === 'shop' ||
+        nearby.kind === 'build' ||
+        nearby.kind === 'guide') &&
       !save.metNPCs.includes(nearby.id)
     ) {
       mutateSave(get, set, (s) => {
@@ -303,9 +355,21 @@ export const useGameStore = create<GameState>((set, get) => ({
       })
     }
 
+    // まだ ひらいていないエリアの せんせいには はなしかけられない
+    const lockedArea = NPC_AREA[nearby.id]
+    if (nearby.kind === 'quest' && lockedArea && !save.unlockedAreas.includes(lockedArea.id)) {
+      playSound('talk')
+      const hint = lockedArea.remainingHint(save)
+      get().showToast(
+        `${UI.area.locked(lockedArea.name)}。${lockedArea.conditionText}${hint ? `（${hint}）` : ''}`,
+      )
+      return
+    }
+
     switch (nearby.kind) {
       case 'quest':
       case 'sign':
+      case 'guide':
         // 会話ウィンドウを開く（セリフがなければ即クエスト）
         playSound('talk')
         get().bumpMission('npcTalked')
@@ -365,6 +429,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         petCelebrate(1600)
         get().showToast(`${UI.world.treasureOpened} ${parts.join('、')} をゲット！🎉`)
         get().bumpMission('chestsOpened')
+        // チュートリアル⑧：たからばこを あけた
+        get().advanceTutorial(7)
         if (newBadges.length > 0) {
           setTimeout(() => get().showToast(UI.toast.newBadge), 2600)
         }
@@ -528,12 +594,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   questNext: () => {
-    const { quest } = get()
+    const { quest, save } = get()
     if (!quest) return
     if (quest.index + 1 >= quest.questions.length) {
       set({ quest: { ...quest, phase: 'done' } })
       // チュートリアル⑤：クエストを さいごまで やった
       get().advanceTutorial(4)
+      // ペットのとくぎ（レベル4）：クエストのあと コインをひろってくる
+      if (save?.pet && petLevel(save.pet.growth) >= 4 && quest.clearedCount > 0) {
+        mutateSave(get, set, (s) => {
+          s.coins += 2
+        })
+        setTimeout(() => get().showToast(UI.petAbility.coinGift), 900)
+      }
     } else {
       set({
         quest: {
@@ -659,7 +732,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         return
       }
     }
-    // たてる！
+    // たてる！（上限チェック済み）
     mutateSave(get, set, (s) => {
       for (const [blockId, count] of Object.entries(cost)) {
         s.blocks[blockId] = (s.blocks[blockId] ?? 0) - count
@@ -741,11 +814,18 @@ export const useGameStore = create<GameState>((set, get) => ({
     const m = missionsForDate(todayString()).find((x) => x.id === missionId)
     if (!m || !missionDone(save, m) || missionClaimed(save, m)) return
     let petLeveled = false
+    let allDone = false
     const parts: string[] = []
     mutateSave(get, set, (s) => {
       ensureDaily(s)
       s.daily.claimed.push(m.id)
       s.totalMissionsCompleted += 1
+      // きょうのミッションを ぜんぶ うけとった？
+      const missions = missionsForDate(todayString())
+      if (missions.every((x) => s.daily.claimed.includes(x.id))) {
+        s.allMissionDays = (s.allMissionDays ?? 0) + 1
+        allDone = true
+      }
       if (m.reward.coins) {
         s.coins += m.reward.coins
         parts.push(`🪙${m.reward.coins}`)
@@ -769,6 +849,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     petCelebrate(1600)
     get().showToast(UI.mission.claimedToast(m.title))
     if (petLeveled) setTimeout(() => notifyPetLevelUp(get), 1800)
+    // ぜんぶクリアのお祝い
+    if (allDone) {
+      setTimeout(() => {
+        playFx('levelup', '🌟 ぜんぶクリア！')
+        get().showToast(UI.mission.allDone)
+      }, 2000)
+    }
   },
 
   grantDailyWelcome: () => {
@@ -793,14 +880,53 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   backToTitle: () => {
     resetPlayerState()
-    set({ screen: 'title', slot: null, save: null, quest: null, nearby: null, dialog: null, fx: null })
+    set({
+      screen: 'title',
+      slot: null,
+      save: null,
+      quest: null,
+      nearby: null,
+      dialog: null,
+      fx: null,
+      areaUnlock: null,
+      petSense: false,
+      storyReplay: false,
+    })
+  },
+
+  dismissAreaUnlock: () => set({ areaUnlock: null }),
+
+  setPetSense: (v) => {
+    if (get().petSense !== v) set({ petSense: v })
+  },
+
+  finishStory: () => {
+    set({ storyReplay: false })
+    const { save } = get()
+    if (save && save.storyProgress === 0) {
+      mutateSave(get, set, (s) => {
+        s.storyProgress = 1
+      })
+    }
+  },
+
+  replayStory: () => set({ storyReplay: true, screen: 'world' }),
+
+  setTitle: (titleId) => {
+    const { save } = get()
+    if (!save || !save.earnedTitles.includes(titleId)) return
+    mutateSave(get, set, (s) => {
+      s.currentTitle = titleId
+    })
+    const t = TITLES.find((x) => x.id === titleId)
+    if (t) get().showToast(UI.title2.changed(t.name))
   },
 
   advanceTutorial: (step) => {
     const { save } = get()
     if (!save || save.tutorialDone || save.tutorialStep !== step) return
     const nextStep = step + 1
-    const finished = nextStep >= 6
+    const finished = nextStep >= UI.tutorial.steps.length
     mutateSave(get, set, (s) => {
       s.tutorialStep = nextStep
       if (finished) {

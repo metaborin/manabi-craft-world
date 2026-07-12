@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGameStore } from '../store/gameStore'
 import { WORLD_HALF, WORLD_NPCS } from '../data/world'
-import { PET_MAP, petScale } from '../data/rewards'
+import { PET_MAP, petLevel, petScale } from '../data/rewards'
 import { AVATARS } from '../data/avatars'
 import { inputState } from './input'
 import { playerState } from './playerState'
@@ -31,6 +31,8 @@ export function Player() {
   const splashCooldown = useRef(0)
   /** チュートリアル①「あるいてみよう」用の移動量 */
   const walkedDistance = useRef(0)
+  /** ペットの宝箱センサーのチェック間隔 */
+  const senseTimer = useRef(0)
   const camera = useThree((s) => s.camera)
   const avatar = useGameStore((s) => s.save?.avatar ?? 0)
   const petType = useGameStore((s) => s.save?.pet?.type ?? null)
@@ -215,6 +217,25 @@ export function Player() {
       }
     }
     useGameStore.getState().setNearby(nearest)
+
+    // ペットのとくぎ（レベル2）：ちかくの あけていない たからばこを かんじる
+    senseTimer.current -= delta
+    if (senseTimer.current <= 0) {
+      senseTimer.current = 0.7
+      const st = useGameStore.getState()
+      const save = st.save
+      let sensing = false
+      if (save?.pet && petLevel(save.pet.growth) >= 2) {
+        for (const npc of WORLD_NPCS) {
+          if (npc.kind !== 'treasure' || save.openedChests.includes(npc.id)) continue
+          if (Math.hypot(npc.pos[0] - g.position.x, npc.pos[2] - g.position.z) < 9) {
+            sensing = true
+            break
+          }
+        }
+      }
+      st.setPetSense(sensing)
+    }
 
     // ペットがついてくる＆正解するとよろこぶ
     if (petRef.current) {

@@ -99,6 +99,19 @@ export const WORLD_NPCS: WorldNPC[] = [
     color: '#9575cd',
   },
   {
+    id: 'npc-guide',
+    kind: 'guide',
+    label: 'ナビちゃん',
+    dialog: [
+      'ここは まなびクラフトワールド！ まなびの ちからで できた せかいだよ。',
+      'さいきん せかいの げんきが すこし へっているの…。',
+      'もんだいを といたり、たからばこを みつけたり、けんちくを すると せかいが げんきに なるよ！',
+      'こまったら わたしに はなしかけてね。がんばって、たんけんか さん！',
+    ],
+    pos: [3, 0, 4],
+    color: '#ffb74d',
+  },
+  {
     id: 'npc-shop',
     kind: 'shop',
     label: 'ペンタてんちょう',
@@ -194,9 +207,9 @@ export const TREASURE_REWARDS: Record<string, TreasureReward> = {
 /** たからばこの総数（図鑑・ステータス表示用） */
 export const TREASURE_COUNT = Object.keys(TREASURE_REWARDS).length
 
-/** 図鑑に載せるキャラクターNPC（quest/shop/build） */
+/** 図鑑に載せるキャラクターNPC（quest/shop/build/guide） */
 export const CHARACTER_NPCS = WORLD_NPCS.filter(
-  (n) => n.kind === 'quest' || n.kind === 'shop' || n.kind === 'build',
+  (n) => n.kind === 'quest' || n.kind === 'shop' || n.kind === 'build' || n.kind === 'guide',
 )
 
 /**
