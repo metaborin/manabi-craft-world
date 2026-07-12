@@ -11,19 +11,20 @@ import { FxOverlay } from '../components/FxOverlay'
 import { FpsMeter } from '../components/FpsMeter'
 import { QuestModal } from './QuestModal'
 import { UI } from '../data/uiText'
+import { countRender } from '../game/perf'
 
-export function WorldScreen() {
-  // save全体を購読すると、コイン増加などのたびに3Dワールド全体が
-  // 再レンダリングされてカクつくため、「あるかどうか」だけを見る
-  const hasSave = useGameStore((s) => s.save !== null)
+export function WorldScreen({ active }: { active: boolean }) {
+  countRender('WorldScreen')
   const quest = useGameStore((s) => s.quest)
   const touchSetting = useGameStore((s) => s.settings.touchButtons)
   const dragRef = useRef<{ id: number; x: number } | null>(null)
 
   useEffect(() => {
     // E/Enterキー：会話中はセリフ送り、それ以外は「しらべる」
+    // （ワールドが隠れているとき＝ほかの画面では反応しない）
     return attachKeyboard(() => {
       const state = useGameStore.getState()
+      if (state.screen !== 'world') return
       if (state.dialog) {
         const lines = state.dialog.npc.dialog ?? []
         if (state.dialog.index < lines.length - 1) state.dialogNext()
@@ -34,13 +35,11 @@ export function WorldScreen() {
     })
   }, [])
 
-  if (!hasSave) return null
-
   const showTouchControls =
     touchSetting === 'on' || (touchSetting === 'auto' && isTouchDevice())
 
   return (
-    <div className="screen world-screen">
+    <div className="screen world-screen" style={active ? undefined : { display: 'none' }}>
       {/* 3Dワールド（ドラッグで視点回転） */}
       <div
         className="world-canvas-wrap"
@@ -58,7 +57,7 @@ export function WorldScreen() {
         }}
         onPointerCancel={() => (dragRef.current = null)}
       >
-        <WorldCanvas />
+        <WorldCanvas active={active} />
       </div>
 
       <Hud />

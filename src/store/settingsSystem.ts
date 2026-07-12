@@ -1,4 +1,4 @@
-import type { Settings } from '../types/game'
+import type { Quality, Settings } from '../types/game'
 
 const KEY = 'manabi-craft-settings'
 
@@ -19,6 +19,14 @@ export function loadSettings(): Settings {
   } catch {
     return { ...DEFAULT_SETTINGS }
   }
+}
+
+/**
+ * 実際に使う描画品質を決める。
+ * quality が明示されていればそれを、なければ けいりょうモードから決める。
+ */
+export function getQuality(settings: Settings): Quality {
+  return settings.quality ?? (settings.liteMode === 'on' ? 'lite' : 'normal')
 }
 
 /** 設定を端末に保存する */

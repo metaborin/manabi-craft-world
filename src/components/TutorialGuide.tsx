@@ -5,6 +5,7 @@ import { missionsForDate, missionClaimed, missionDone, missionProgress } from '.
 import { UNLOCKABLE_AREAS } from '../data/areas'
 import { todayString } from '../store/saveSystem'
 import { UI } from '../data/uiText'
+import { countRender } from '../game/perf'
 import type { Subject } from '../types/game'
 
 /** 曜日と学年から「きょうのおすすめ教科」を決める */
@@ -20,6 +21,7 @@ function todaysSubject(grade: number): Subject {
  * ペットがレベル3になると、ペットがヒントをくれる形になる。
  */
 export function TutorialGuide() {
+  countRender('TutorialGuide')
   const save = useGameStore((s) => s.save)
   const petSense = useGameStore((s) => s.petSense)
   const setScreen = useGameStore((s) => s.setScreen)

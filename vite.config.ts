@@ -7,4 +7,14 @@ export default defineConfig({
   server: {
     host: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split three.js into a stable vendor chunk for better caching.
+        manualChunks: {
+          'vendor-three': ['three', '@react-three/fiber'],
+        },
+      },
+    },
+  },
 })

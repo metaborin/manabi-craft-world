@@ -7,8 +7,12 @@ import { BLOCK_MAP } from '../data/rewards'
 import { GRADES } from '../data/grades'
 import { UNLOCKABLE_AREAS, NPC_AREA } from '../data/areas'
 import { todayString } from '../store/saveSystem'
+import { getQuality } from '../store/settingsSystem'
+import type { Quality } from '../types/game'
 import { TextSprite } from './TextSprite'
 import { Player } from './Player'
+import { PerfProbe } from './PerfProbe'
+import { countRender } from './perf'
 import {
   Tree,
   SakuraTree,
@@ -118,7 +122,6 @@ function mulberry32(seed: number) {
  */
 function Flowers({ lite }: { lite: boolean }) {
   const ref = useRef<THREE.InstancedMesh>(null!)
-
   const items = useMemo(() => {
     const rand = mulberry32(42)
     const list: { pos: [number, number, number]; color: string }[] = []
@@ -168,7 +171,10 @@ function Flowers({ lite }: { lite: boolean }) {
   )
 }
 
-const Decorations = memo(function Decorations({ lite }: { lite: boolean }) {
+const Decorations = memo(function Decorations({ quality }: { quality: Quality }) {
+  // normal: すべて表示 / lite: ラベルと小物をへらす / ultra: 当たり判定のある物だけ
+  const showLabels = quality === 'normal'
+  const showDeco = quality !== 'ultra'
   return (
     <group>
       {/* ---- 木々（位置データはterrainの当たり判定と共有） ---- */}
@@ -182,15 +188,19 @@ const Decorations = memo(function Decorations({ lite }: { lite: boolean }) {
         <PineTree key={`p${i}`} position={p} />
       ))}
 
-      {/* ---- はな（instancedMeshで1ドローコール） ---- */}
-      <Flowers lite={lite} />
+      {/* ---- はな（instancedMeshで1ドローコール。ultraでは非表示） ---- */}
+      {showDeco && <Flowers lite={quality !== 'normal'} />}
 
       {/* ---- ランドマーク ---- */}
-      {/* はじまり広場：ふんすい＋がいとう */}
+      {/* はじまり広場：ふんすい＋がいとう（がいとうは飾りだけなのでliteでは省く） */}
       <Fountain position={[2.5, 0, -2.5]} />
-      <Lamp position={[-3.5, 0, -3.5]} />
-      <Lamp position={[3.5, 0, 3.5]} />
-      <Lamp position={[-3.5, 0, 3.5]} />
+      {showLabels && (
+        <>
+          <Lamp position={[-3.5, 0, -3.5]} />
+          <Lamp position={[3.5, 0, 3.5]} />
+          <Lamp position={[-3.5, 0, 3.5]} />
+        </>
+      )}
 
       {/* さんすうのおか：かずのとう＋かいだん＋ふうしゃ */}
       <NumberTower position={[17, 0, -13]} />
@@ -232,15 +242,19 @@ const Decorations = memo(function Decorations({ lite }: { lite: boolean }) {
         </mesh>
       </group>
 
-      {/* ---- エリアのなまえ ---- */}
-      <TextSprite text="🔢 さんすうのおか" position={[14, 3.4, -10]} scale={1.5} bg="rgba(255,244,222,0.95)" />
-      <TextSprite text="📖 こくごのもり" position={[-14, 3.4, -10]} scale={1.5} bg="rgba(230,246,228,0.95)" />
-      <TextSprite text="🔬 りかのいけ" position={[7, 3.2, -16]} scale={1.4} bg="rgba(223,244,248,0.95)" />
-      <TextSprite text="🗾 しゃかいのまち" position={[18, 3.4, 2]} scale={1.4} bg="rgba(240,235,228,0.95)" />
-      <TextSprite text="🌍 えいごのみなと" position={[-18, 3.2, 2]} scale={1.4} bg="rgba(236,231,246,0.95)" />
-      <TextSprite text="🏠 けんちくエリア" position={[0.5, 3.2, 16]} scale={1.5} bg="rgba(250,240,224,0.95)" />
-      <TextSprite text="🌼 はなばたけ" position={[-15, 2.6, 17]} scale={1.2} bg="rgba(240,251,232,0.95)" />
-      <TextSprite text="⛲ はじまりひろば" position={[0, 4.2, 0]} scale={1.5} />
+      {/* ---- エリアのなまえ（スプライト＝1枚1ドローコールなので、lite以上では省く） ---- */}
+      {showLabels && (
+        <>
+          <TextSprite text="🔢 さんすうのおか" position={[14, 3.4, -10]} scale={1.5} bg="rgba(255,244,222,0.95)" />
+          <TextSprite text="📖 こくごのもり" position={[-14, 3.4, -10]} scale={1.5} bg="rgba(230,246,228,0.95)" />
+          <TextSprite text="🔬 りかのいけ" position={[7, 3.2, -16]} scale={1.4} bg="rgba(223,244,248,0.95)" />
+          <TextSprite text="🗾 しゃかいのまち" position={[18, 3.4, 2]} scale={1.4} bg="rgba(240,235,228,0.95)" />
+          <TextSprite text="🌍 えいごのみなと" position={[-18, 3.2, 2]} scale={1.4} bg="rgba(236,231,246,0.95)" />
+          <TextSprite text="🏠 けんちくエリア" position={[0.5, 3.2, 16]} scale={1.5} bg="rgba(250,240,224,0.95)" />
+          <TextSprite text="🌼 はなばたけ" position={[-15, 2.6, 17]} scale={1.2} bg="rgba(240,251,232,0.95)" />
+          <TextSprite text="⛲ はじまりひろば" position={[0, 4.2, 0]} scale={1.5} />
+        </>
+      )}
     </group>
   )
 })
@@ -251,6 +265,9 @@ const Decorations = memo(function Decorations({ lite }: { lite: boolean }) {
 function NPCFigure({ npc }: { npc: WorldNPC }) {
   const group = useRef<THREE.Group>(null!)
   const isNear = useGameStore((s) => s.nearby?.id === npc.id)
+  const quality = useGameStore((s) => getQuality(s.settings))
+  // ラベル：normal=つねに / lite=ちかづいたときだけ / ultra=なし
+  const showLabel = quality === 'normal' || (quality === 'lite' && isNear)
   const phase = useMemo(() => npc.pos[0] * 3.1 + npc.pos[2], [npc])
   const lightColor = useMemo(
     () => '#' + new THREE.Color(npc.color).lerp(new THREE.Color('#ffffff'), 0.35).getHexString(),
@@ -285,7 +302,7 @@ function NPCFigure({ npc }: { npc: WorldNPC }) {
           <boxGeometry args={[1.3, 0.75, 0.12]} />
           <meshLambertMaterial color={npc.color} emissive={emissive} />
         </mesh>
-        <TextSprite text={`📌 ${npc.label}`} position={[0, 1.95, 0]} scale={0.9} />
+        {showLabel && <TextSprite text={`📌 ${npc.label}`} position={[0, 1.95, 0]} scale={0.9} />}
         {isNear && <NearRing />}
       </group>
     )
@@ -318,17 +335,18 @@ function NPCFigure({ npc }: { npc: WorldNPC }) {
           <meshBasicMaterial color="#3a3a3a" />
         </mesh>
       </group>
-      {/* ちかづくと 吹き出しが出る（ロック中は🔒） */}
-      {isNear ? (
-        <TextSprite
-          text={areaLocked ? `🔒 ${npc.label}` : `💬 ${npc.label}`}
-          position={[0, 2.2, 0]}
-          scale={1.05}
-          bg="rgba(255,249,224,0.97)"
-        />
-      ) : (
-        <TextSprite text={areaLocked ? `🔒 ${npc.label}` : npc.label} position={[0, 2.15, 0]} scale={1.0} />
-      )}
+      {/* ちかづくと 吹き出しが出る（ロック中は🔒）。lite/ultraではラベルをへらす */}
+      {showLabel &&
+        (isNear ? (
+          <TextSprite
+            text={areaLocked ? `🔒 ${npc.label}` : `💬 ${npc.label}`}
+            position={[0, 2.2, 0]}
+            scale={1.05}
+            bg="rgba(255,249,224,0.97)"
+          />
+        ) : (
+          <TextSprite text={areaLocked ? `🔒 ${npc.label}` : npc.label} position={[0, 2.15, 0]} scale={1.0} />
+        ))}
       {isNear && <NearRing />}
     </group>
   )
@@ -401,6 +419,8 @@ function AreaGates() {
 function ChestFigure({ npc, isNear }: { npc: WorldNPC; isNear: boolean }) {
   const sparkle = useRef<THREE.Group>(null!)
   const isTreasure = npc.kind === 'treasure'
+  const quality = useGameStore((s) => getQuality(s.settings))
+  const showLabel = quality === 'normal' || (quality === 'lite' && isNear)
   const opened = useGameStore((s) => {
     if (!s.save) return false
     return isTreasure
@@ -443,13 +463,15 @@ function ChestFigure({ npc, isNear }: { npc: WorldNPC; isNear: boolean }) {
           <meshBasicMaterial color="#ffe9a8" />
         </mesh>
       )}
-      {/* まだあけていない たからばこは ✨がうかぶ */}
-      {!opened && (
+      {/* まだあけていない たからばこは ✨がうかぶ（normalのみ） */}
+      {!opened && quality === 'normal' && (
         <group ref={sparkle}>
           <TextSprite text="✨" position={[0, 0, 0]} scale={0.7} bg="rgba(255,255,255,0)" />
         </group>
       )}
-      {!isTreasure && <TextSprite text={`🎁 ${npc.label}`} position={[0, 1.9, 0]} scale={0.9} />}
+      {!isTreasure && showLabel && (
+        <TextSprite text={`🎁 ${npc.label}`} position={[0, 1.9, 0]} scale={0.9} />
+      )}
       {isNear && <NearRing />}
     </group>
   )
@@ -549,7 +571,7 @@ function blockMaterial(blockId: string): THREE.MeshLambertMaterial {
   return mat
 }
 
-function BuiltBlocks() {
+function BuiltBlocks({ quality }: { quality: Quality }) {
   // buildLayersはmutateSaveが「内容が変わったときだけ」新しい参照にするので、
   // コイン増加などでは再レンダリングされない
   const layers = useGameStore((s) => s.save?.buildLayers)
@@ -576,8 +598,8 @@ function BuiltBlocks() {
       {blocks.map((b) => (
         <mesh key={b.key} position={b.pos} geometry={BLOCK_GEOMETRY} material={blockMaterial(b.blockId)} />
       ))}
-      {/* なにか たてると「じぶんの けんちく」の めじるしが出る */}
-      {hasAny && (
+      {/* なにか たてると「じぶんの けんちく」の めじるしが出る（normalのみ） */}
+      {hasAny && quality === 'normal' && (
         <TextSprite
           text="✨ じぶんの けんちく"
           position={[0.5, 4.6, 16.5]}
@@ -592,27 +614,37 @@ function BuiltBlocks() {
 // ---------------------------------------------------------------
 // ワールド全体
 // ---------------------------------------------------------------
-export function WorldCanvas() {
-  // けいりょうモード：解像度を下げ、装飾を減らす
-  const lite = useGameStore((s) => s.settings.liteMode === 'on')
+export function WorldCanvas({ active }: { active: boolean }) {
+  countRender('WorldCanvas')
+  // 描画品質：normal / lite（けいりょうモード） / ultra（内部用の超軽量）
+  const quality = useGameStore((s) => getQuality(s.settings))
+  // クエストや会話中は3Dを止めて、ボタン反応にCPU/GPUをまわす
+  const paused = useGameStore((s) => s.quest !== null || s.dialog !== null)
+  const frameloop = !active || paused ? 'demand' : 'always'
+
   return (
     <Canvas
-      dpr={lite ? 1 : [1, 1.5]}
+      frameloop={frameloop}
+      // PCの高解像度モニタでピクセル数が爆発しないよう上限を低めにする
+      // （フェーズ3.2の計測で、シーンは軽くフィルレートが主犯と判明）
+      dpr={quality === 'normal' ? [1, 1.25] : 1}
+      gl={{ antialias: false, powerPreference: 'high-performance' }}
       camera={{ fov: 50, position: [0, 8, 16], near: 0.1, far: 120 }}
       style={{ touchAction: 'none' }}
     >
+      {import.meta.env.DEV && <PerfProbe />}
       <color attach="background" args={['#aee7ff']} />
       <fog attach="fog" args={['#aee7ff', 35, 75]} />
       <hemisphereLight args={['#ffffff', '#8fbb6e', 0.95]} />
       <directionalLight position={[12, 20, 8]} intensity={0.75} />
       <Ground />
-      <Decorations lite={lite} />
+      <Decorations quality={quality} />
       {WORLD_NPCS.map((npc) => (
         <NPCFigure key={npc.id} npc={npc} />
       ))}
       <AreaGates />
       <TutorialArrows />
-      <BuiltBlocks />
+      <BuiltBlocks quality={quality} />
       <Player />
     </Canvas>
   )

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { useGameStore } from './store/gameStore'
 import { initAudioUnlock, playSound } from './game/sound'
+import { countRender } from './game/perf'
 import { flushSave } from './store/saveSystem'
 import { TitleScreen } from './screens/TitleScreen'
 import { NameScreen } from './screens/NameScreen'
@@ -45,7 +46,9 @@ function LazyFallback() {
 }
 
 export default function App() {
+  countRender('App')
   const screen = useGameStore((s) => s.screen)
+  const hasSave = useGameStore((s) => s.save !== null)
   const textSize = useGameStore((s) => s.settings.textSize)
   const lite = useGameStore((s) => s.settings.liteMode === 'on')
   const showStory = useGameStore(
@@ -82,7 +85,10 @@ export default function App() {
       {screen === 'title' && <TitleScreen />}
       {screen === 'name' && <NameScreen />}
       {screen === 'grade' && <GradeScreen />}
-      {screen === 'world' && <WorldScreen />}
+      {/* ワールドはセーブ中はずっとマウントしたまま隠す。
+          画面を切りかえるたびにWebGLコンテキストを作り直すと
+          PCで大きな引っかかりになるため（フェーズ3.2の計測結果より） */}
+      {hasSave && <WorldScreen active={screen === 'world'} />}
       <Suspense fallback={<LazyFallback />}>
         {screen === 'status' && <StatusScreen />}
         {screen === 'build' && <BuildScreen />}

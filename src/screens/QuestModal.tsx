@@ -3,6 +3,7 @@ import { SUBJECTS } from '../data/grades'
 import { BLOCK_MAP } from '../data/rewards'
 import { UI } from '../data/uiText'
 import { Furigana } from '../components/Furigana'
+import { countRender } from '../game/perf'
 
 /** クエスト完了画面のかるい紙ふぶき（CSSアニメーション） */
 function Confetti() {
@@ -24,6 +25,7 @@ function Confetti() {
  * 2回まちがえたら正解がひかって「いっしょに解く」形になる。
  */
 export function QuestModal() {
+  countRender('QuestModal')
   const quest = useGameStore((s) => s.quest)
   const answerQuestion = useGameStore((s) => s.answerQuestion)
   const showHint = useGameStore((s) => s.showHint)

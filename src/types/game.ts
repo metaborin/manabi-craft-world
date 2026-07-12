@@ -182,7 +182,16 @@ export interface Settings {
   furigana: 'on' | 'off'
   /** けいりょうモード（演出や装飾をへらして軽くする） */
   liteMode: 'on' | 'off'
+  /**
+   * 描画品質（内部用。UIには出していない）。
+   * 未設定ならliteModeから決まる。'ultra'は緊急用の超軽量
+   * （localStorageのmanabi-craft-settingsに quality:"ultra" を書くと有効）
+   */
+  quality?: 'normal' | 'lite' | 'ultra'
 }
+
+/** 実際に使う描画品質 */
+export type Quality = 'normal' | 'lite' | 'ultra'
 
 export type Screen =
   | 'title'

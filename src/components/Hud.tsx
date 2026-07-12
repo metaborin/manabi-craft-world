@@ -5,8 +5,11 @@ import { xpForLevel } from '../data/rewards'
 import { requestRespawn } from '../game/playerState'
 import { UI } from '../data/uiText'
 
+import { countRender } from '../game/perf'
+
 /** ワールド画面の上部HUD（プレイヤー情報・コイン・ボタン類） */
 export function Hud() {
+  countRender('Hud')
   // 必要な値だけを購読する（save全体を購読すると毎回再レンダリングされる）
   const name = useGameStore((s) => s.save?.name)
   const avatar = useGameStore((s) => s.save?.avatar ?? 0)

@@ -102,7 +102,21 @@ export function loadSave(slot: SlotId): SaveData | null {
 export function writeSave(slot: SlotId, data: SaveData): void {
   try {
     data.lastPlayed = new Date().toISOString()
-    localStorage.setItem(KEY_PREFIX + slot, JSON.stringify(data))
+    if (import.meta.env.DEV) {
+      // 開発時はJSON化と書き込みの時間を計測する
+      const t0 = performance.now()
+      const json = JSON.stringify(data)
+      const t1 = performance.now()
+      localStorage.setItem(KEY_PREFIX + slot, json)
+      const t2 = performance.now()
+      void import('../game/perf').then(({ perfInfo }) => {
+        perfInfo.lastStringifyMs = t1 - t0
+        perfInfo.lastSetItemMs = t2 - t1
+        perfInfo.saveCount += 1
+      })
+    } else {
+      localStorage.setItem(KEY_PREFIX + slot, JSON.stringify(data))
+    }
   } catch {
     // 保存に失敗しても遊び続けられるようにする（容量不足など）
   }
