@@ -328,6 +328,16 @@ export const UI = {
     alreadyCleared: 'クリアずみ！ もう一度 あそべるよ',
     notReady: (name: string) => `${name}は まだ ねむっているみたい…`,
     preparing: 'じゅんびちゅう！ おたのしみに🌟',
+    /** じゅんび中のボスに はなしかけたときの あんない */
+    comingSoon: (icon: string, name: string, soon: string, nowSubjects: string) =>
+      `${icon}「${name}」：${soon}。もんだいが ふえたら ちょうせんできるよ。いまは ${nowSubjects}の ぼうけんを すすめよう🌟`,
+    /** 5教科一覧の状態表示 */
+    stateCleared: '⭐ クリア！',
+    stateAvailable: '✨ ちょうせんできるよ！',
+    stateSoonMark: '💤',
+    futureUnitsLabel: (units: string) => `これから：${units} など`,
+    rewardHint: 'ごほうび：🪙コイン・✨けいけんち・💡まなびの光',
+    playAgainHint: 'クリアずみ！ なんども あそべるよ',
   },
 
   temple: {
@@ -339,6 +349,12 @@ export const UI = {
     intro: 'ようこそ、まなびの しんでんへ。ことばと かずの 力を みせて、ワールドに 光を とりもどそう！',
     outro: 'しんでんが まばゆく かがやいた…！',
     lightsLabel: 'まなびの光',
+    /** 5教科の光の状態表示 */
+    lightOn: 'ひかった！',
+    lightOff: 'まだ',
+    lightSoon: 'じゅんびちゅう',
+    /** 「2/5」がクリア率と誤解されないための ひとこと */
+    lightsNote: (nowSubjects: string) => `いまは ${nowSubjects}の 光を あつめられるよ`,
   },
 
   /** エンディング */
@@ -346,6 +362,7 @@ export const UI = {
     slides: [
       { icon: '✨', text: 'まなびの 光が もどったよ！' },
       { icon: '🌍', text: 'ことばと かずの 力で、\nワールドが 元気に なりました。' },
+      { icon: '🚪', text: 'でも、まだ ひらいていない\nとびらが あるみたい…。' },
       { icon: '🚀', text: 'これからも、あたらしい まなびを\n見つけに 行こう！' },
     ],
     congrats: 'クリア おめでとう！',
@@ -359,7 +376,7 @@ export const UI = {
     treasure: 'まだ みつけていない たからばこが あるよ🎁',
     build: 'じぶんの 町を もっと つくろう🏠',
     pet: 'ペットと いっしょに たんけんしよう🐾',
-    future: 'つぎは りかエリアの ボスが めをさますかも…？🌟',
+    future: 'りか・しゃかい・えいごの ボスも いつか めをさますかも…？🌟',
   },
 
   zukan: {

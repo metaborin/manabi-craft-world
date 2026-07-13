@@ -6,6 +6,8 @@ import { WORLD_HALF, WORLD_NPCS, BUILD_GRID_SIZE, BUILD_ORIGIN, TREE_POSITIONS }
 import { BLOCK_MAP } from '../data/rewards'
 import { GRADES } from '../data/grades'
 import { UNLOCKABLE_AREAS, NPC_AREA } from '../data/areas'
+import { BOSSES, BOSS_MAP, isBossEnabled } from '../data/bosses'
+import { SUBJECTS } from '../data/grades'
 import { todayString } from '../store/saveSystem'
 import { getQuality } from '../store/settingsSystem'
 import type { Quality } from '../types/game'
@@ -488,6 +490,7 @@ function ChestFigure({ npc, isNear }: { npc: WorldNPC; isNear: boolean }) {
 /**
  * エリアボス。「たおす あいて」ではなく「元気にしてあげる なかま」。
  * クリアすると にっこりした 明るい すがたになる。
+ * じゅんび中の教科（理科・社会・英語）は ねむった すがたで まっている。
  */
 function BossFigure({
   npc,
@@ -502,6 +505,10 @@ function BossFigure({
   const cleared = useGameStore(
     (s) => (npc.subject ? (s.save?.bossCleared.includes(npc.subject) ?? false) : false),
   )
+  // 有効化されているかは問題データで決まる静的な値（再計算しない）
+  const def = npc.subject ? BOSS_MAP[npc.subject] : undefined
+  const sleeping = useMemo(() => (def ? !isBossEnabled(def) : false), [def])
+  const quality = useGameStore((s) => getQuality(s.settings))
   const lightColor = useMemo(
     () => '#' + new THREE.Color(npc.color).lerp(new THREE.Color('#ffffff'), 0.45).getHexString(),
     [npc.color],
@@ -509,11 +516,14 @@ function BossFigure({
 
   useFrame(({ clock }) => {
     if (!group.current) return
-    // ふわふわ うかぶ（クリア後は うれしそうに はやめ）
-    const speed = cleared ? 2.6 : 1.4
-    group.current.position.y = 0.9 + Math.sin(clock.elapsedTime * speed) * 0.18
-    group.current.rotation.y = Math.sin(clock.elapsedTime * 0.6) * 0.25
+    // ふわふわ うかぶ（クリア後は うれしそうに はやめ・ねむり中は ゆっくり）
+    const speed = cleared ? 2.6 : sleeping ? 0.8 : 1.4
+    group.current.position.y = 0.9 + Math.sin(clock.elapsedTime * speed) * (sleeping ? 0.08 : 0.18)
+    group.current.rotation.y = sleeping ? 0 : Math.sin(clock.elapsedTime * 0.6) * 0.25
   })
+
+  const bodyOpacity = cleared ? 0.95 : sleeping ? 0.45 : 0.7
+  const partOpacity = cleared ? 0.9 : sleeping ? 0.35 : 0.55
 
   return (
     <group position={npc.pos}>
@@ -524,33 +534,42 @@ function BossFigure({
           <meshLambertMaterial
             color={cleared ? lightColor : npc.color}
             transparent
-            opacity={cleared ? 0.95 : 0.7}
+            opacity={bodyOpacity}
           />
         </mesh>
         <mesh position={[0.5, 0.6, 0.3]}>
           <boxGeometry args={[0.5, 0.5, 0.5]} />
-          <meshLambertMaterial color={npc.color} transparent opacity={cleared ? 0.9 : 0.55} />
+          <meshLambertMaterial color={npc.color} transparent opacity={partOpacity} />
         </mesh>
         <mesh position={[-0.55, 0.45, -0.2]}>
           <boxGeometry args={[0.4, 0.4, 0.4]} />
-          <meshLambertMaterial color={npc.color} transparent opacity={cleared ? 0.9 : 0.55} />
+          <meshLambertMaterial color={npc.color} transparent opacity={partOpacity} />
         </mesh>
-        {/* め（クリアで にっこり） */}
+        {/* め（クリアで にっこり・ねむり中は とじている） */}
         <mesh position={[-0.22, 0.12, 0.62]}>
-          <boxGeometry args={[0.14, cleared ? 0.06 : 0.18, 0.02]} />
+          <boxGeometry args={[0.14, cleared || sleeping ? 0.06 : 0.18, 0.02]} />
           <meshBasicMaterial color="#3a3a3a" />
         </mesh>
         <mesh position={[0.22, 0.12, 0.62]}>
-          <boxGeometry args={[0.14, cleared ? 0.06 : 0.18, 0.02]} />
+          <boxGeometry args={[0.14, cleared || sleeping ? 0.06 : 0.18, 0.02]} />
           <meshBasicMaterial color="#3a3a3a" />
         </mesh>
       </group>
       {showLabel && (
         <TextSprite
-          text={cleared ? `⭐ ${npc.label}` : npc.label}
+          text={cleared ? `⭐ ${npc.label}` : sleeping ? `💤 ${npc.label}` : npc.label}
           position={[0, 2.6, 0]}
           scale={1.05}
           bg={isNear ? 'rgba(255,249,224,0.97)' : 'rgba(255,255,255,0.9)'}
+        />
+      )}
+      {/* じゅんび中の かんばん（liteでは ちかづいたときだけ） */}
+      {sleeping && def && (quality === 'normal' || isNear) && (
+        <TextSprite
+          text={`${SUBJECTS[def.id].icon} ${SUBJECTS[def.id].name}ボス：${def.soonText}`}
+          position={[0, 2.0, 0]}
+          scale={0.75}
+          bg="rgba(255,255,255,0.88)"
         />
       )}
       {isNear && <NearRing />}
@@ -560,16 +579,15 @@ function BossFigure({
 
 /**
  * まなびの しんでん。ボスをクリアするたびに 光のオーブが ともる。
- * とびらは 2つの光が そろうと ひらく。
+ * オーブは5教科ぶん（こくご・さんすう・りか・しゃかい・えいご）。
+ * とびらは こくご＋さんすうの 2つの光が そろうと ひらく（解放条件は2教科のまま）。
  */
 function TempleFigure({ npc, isNear }: { npc: WorldNPC; isNear: boolean }) {
   const crystal = useRef<THREE.Mesh>(null!)
-  const lights = useGameStore((s) => s.save?.bossCleared.length ?? 0)
-  const unlocked = useGameStore(
-    (s) =>
-      (s.save?.bossCleared.includes('kokugo') ?? false) &&
-      (s.save?.bossCleared.includes('sansu') ?? false),
-  )
+  // bossClearedはmutateSaveが内容の変わらないかぎり同じ参照を保つ
+  const bossCleared = useGameStore((s) => s.save?.bossCleared)
+  const unlocked =
+    (bossCleared?.includes('kokugo') ?? false) && (bossCleared?.includes('sansu') ?? false)
   const cleared = useGameStore((s) => s.save?.templeCleared ?? false)
 
   useFrame(({ clock }) => {
@@ -629,17 +647,20 @@ function TempleFigure({ npc, isNear }: { npc: WorldNPC; isNear: boolean }) {
             <meshBasicMaterial color="#fff3b0" />
           </mesh>
         )}
-        {/* まなびの光オーブ（ボスクリアで ともる。将来5つまで） */}
-        {[-1.5, 1.5].map((x, i) => (
-          <mesh key={i} position={[x, 3.9, 0]}>
-            <sphereGeometry args={[0.28, 8, 8]} />
-            {i < lights ? (
-              <meshBasicMaterial color="#ffe082" />
-            ) : (
-              <meshLambertMaterial color="#9aa0a6" />
-            )}
-          </mesh>
-        ))}
+        {/* まなびの光オーブ（5教科ぶん。ボスをクリアした教科が ともる） */}
+        {BOSSES.map((b, i) => {
+          const lit = bossCleared?.includes(b.id) ?? false
+          return (
+            <mesh key={b.id} position={[-1.8 + i * 0.9, 3.95, 0]}>
+              <sphereGeometry args={[0.24, 8, 8]} />
+              {lit ? (
+                <meshBasicMaterial color="#ffe082" />
+              ) : (
+                <meshLambertMaterial color="#9aa0a6" />
+              )}
+            </mesh>
+          )
+        })}
       </group>
 
       <TextSprite

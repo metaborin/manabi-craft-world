@@ -1,8 +1,8 @@
 import { useGameStore } from '../store/gameStore'
 import { BLOCKS, BADGES, PET_MAP, petLevel, petStage } from '../data/rewards'
 import { CHARACTER_NPCS, TREASURE_COUNT } from '../data/world'
-import { ALL_AREAS } from '../data/areas'
-import { BOSSES, ACTIVE_BOSSES } from '../data/bosses'
+import { ALL_AREAS, AREA_MAP } from '../data/areas'
+import { BOSSES, activeSubjectsText, bossState, isTempleReady } from '../data/bosses'
 import { SUBJECTS } from '../data/grades'
 import { AVATARS } from '../data/avatars'
 import { UI } from '../data/uiText'
@@ -144,40 +144,60 @@ export function ZukanScreen() {
           <div className="status-sub">{UI.mission.totalDone(save.totalMissionsCompleted)}</div>
         </div>
 
-        {/* まなびの光（ボス・しんでん・エンディング） */}
+        {/* まなびの光（5教科ボス・しんでん・エンディング） */}
         <div className="status-card">
           <div className="status-row-label">
-            ✨ まなびの光（{save.bossCleared.length}／{ACTIVE_BOSSES.length}）
+            ✨ まなびの光（{save.bossCleared.length}／{BOSSES.length}）
           </div>
-          <div className="zukan-grid">
+          <div className="status-sub">{UI.temple.lightsNote(activeSubjectsText())}</div>
+          <div className="boss-list">
             {BOSSES.map((b) => {
-              const cleared = save.bossCleared.includes(b.id)
+              const state = bossState(save, b)
               return (
-                <div key={b.id} className={`zukan-item ${cleared ? 'got' : ''}`}>
-                  <span className="zukan-chest">{b.available ? b.icon : '🔒'}</span>
-                  <span className="zukan-name">
-                    {b.available ? b.name : UI.zukan.unknown}
-                    <br />
-                    {b.available ? (cleared ? '⭐ クリア！' : 'まだ') : 'じゅんびちゅう'}
+                <div key={b.id} className={`boss-row ${state}`}>
+                  <span className="boss-row-light">
+                    {state === 'cleared' ? '💡' : state === 'comingSoon' ? '💤' : '⚪'}
                   </span>
+                  <div className="boss-row-main">
+                    <div className="boss-row-name">
+                      {SUBJECTS[b.id].icon} {SUBJECTS[b.id].name}：{b.icon} {b.name}
+                    </div>
+                    <div className="boss-row-sub">
+                      {state === 'cleared' && `${UI.boss.stateCleared}　${UI.boss.playAgainHint}`}
+                      {state === 'available' && `${UI.boss.stateAvailable}　${UI.boss.rewardHint}`}
+                      {state === 'locked' &&
+                        `${b.conditionText}${b.remainingHint(save) ? `（${b.remainingHint(save)}）` : ''}`}
+                      {state === 'comingSoon' && (
+                        <>
+                          {b.soonText}
+                          <br />
+                          {UI.boss.futureUnitsLabel(b.futureUnits.join('・'))}
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )
             })}
-            <div className={`zukan-item ${save.templeCleared ? 'got' : ''}`}>
-              <span className="zukan-chest">🏛️</span>
-              <span className="zukan-name">
-                しんでんチャレンジ
-                <br />
-                {save.templeCleared ? '⭐ クリア！' : 'まだ'}
-              </span>
+            <div className={`boss-row ${save.templeCleared ? 'cleared' : ''}`}>
+              <span className="boss-row-light">{save.templeCleared ? '💡' : '⚪'}</span>
+              <div className="boss-row-main">
+                <div className="boss-row-name">🏛️ {UI.temple.challengeName}</div>
+                <div className="boss-row-sub">
+                  {save.templeCleared
+                    ? `${UI.boss.stateCleared}　${UI.boss.playAgainHint}`
+                    : isTempleReady(save)
+                      ? UI.boss.stateAvailable
+                      : AREA_MAP['temple'].conditionText}
+                </div>
+              </div>
             </div>
-            <div className={`zukan-item ${save.endingSeen ? 'got' : ''}`}>
-              <span className="zukan-chest">🎬</span>
-              <span className="zukan-name">
-                エンディング
-                <br />
-                {save.endingSeen ? '⭐ 見た！' : 'まだ'}
-              </span>
+            <div className={`boss-row ${save.endingSeen ? 'cleared' : ''}`}>
+              <span className="boss-row-light">{save.endingSeen ? '💡' : '⚪'}</span>
+              <div className="boss-row-main">
+                <div className="boss-row-name">🎬 エンディング</div>
+                <div className="boss-row-sub">{save.endingSeen ? '⭐ 見た！' : 'まだ'}</div>
+              </div>
             </div>
           </div>
         </div>

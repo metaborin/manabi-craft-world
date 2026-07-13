@@ -13,6 +13,7 @@ import {
   xpForLevel,
 } from '../data/rewards'
 import { getQuestions } from '../data/questions'
+import { BOSSES, activeSubjectsText } from '../data/bosses'
 import { AVATARS } from '../data/avatars'
 import { TREASURE_COUNT } from '../data/world'
 import { UI } from '../data/uiText'
@@ -133,9 +134,10 @@ export function StatusScreen() {
               🎯 ミッションたっせい {save.totalMissionsCompleted}かい
             </span>
             <span className="explore-stat">
-              💡 まなびの光 {save.bossCleared.length}／2
+              💡 まなびの光 {save.bossCleared.length}／{BOSSES.length}
             </span>
           </div>
+          <div className="status-sub">{UI.temple.lightsNote(activeSubjectsText())}</div>
           <div className="bottom-row">
             <button className="btn btn-primary" onClick={() => setScreen('mission')}>
               {UI.mission.open} をみる ▶

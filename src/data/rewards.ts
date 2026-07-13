@@ -285,6 +285,43 @@ export const BADGES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
     icon: '🎬',
     check: (s) => s.endingSeen === true,
   },
+  // ---- 将来のボス用（理科・社会・英語が有効になると とれるようになる） ----
+  {
+    id: 'boss-rika',
+    name: 'りかボス クリア',
+    desc: '「しぜんの なぞ」を といた',
+    icon: '🔍',
+    check: (s) => s.bossCleared?.includes('rika') ?? false,
+  },
+  {
+    id: 'boss-shakai',
+    name: 'しゃかいボス クリア',
+    desc: '「まちの まよい道」の みちを ひらいた',
+    icon: '🗺️',
+    check: (s) => s.bossCleared?.includes('shakai') ?? false,
+  },
+  {
+    id: 'boss-eigo',
+    name: 'えいごボス クリア',
+    desc: '「ことばの とびら」を ひらいた',
+    icon: '🚪',
+    check: (s) => s.bossCleared?.includes('eigo') ?? false,
+  },
+  {
+    id: 'lights-5',
+    name: '5きょうかの 光',
+    desc: 'まなびの光を 5つ ぜんぶ あつめた',
+    icon: '🌈',
+    // bossClearedにはボスの教科IDしか入らないので、5つ＝5教科ぜんぶ
+    check: (s) => (s.bossCleared?.length ?? 0) >= 5,
+  },
+  {
+    id: 'manabi-master',
+    name: 'まなびマスター',
+    desc: '5つの光と しんでんチャレンジを ぜんぶ クリアした',
+    icon: '👑',
+    check: (s) => (s.bossCleared?.length ?? 0) >= 5 && s.templeCleared === true,
+  },
 ]
 
 /**
@@ -360,6 +397,42 @@ export const TITLES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
     desc: 'エンディングを むかえた',
     icon: '🌟',
     check: (s) => s.endingSeen === true,
+  },
+  // ---- 将来のボス用（理科・社会・英語が有効になると とれるようになる） ----
+  {
+    id: 'shizen-tanken',
+    name: 'しぜんの たんけんか',
+    desc: 'りかボスを クリアした',
+    icon: '🔍',
+    check: (s) => s.bossCleared?.includes('rika') ?? false,
+  },
+  {
+    id: 'machi-tanken',
+    name: 'まちたんけんたい',
+    desc: 'しゃかいボスを クリアした',
+    icon: '🗺️',
+    check: (s) => s.bossCleared?.includes('shakai') ?? false,
+  },
+  {
+    id: 'eigo-tobira',
+    name: 'えいごの とびらを ひらいた こ',
+    desc: 'えいごボスを クリアした',
+    icon: '🚪',
+    check: (s) => s.bossCleared?.includes('eigo') ?? false,
+  },
+  {
+    id: 'five-challenger',
+    name: '5きょうか チャレンジャー',
+    desc: 'まなびの光を 5つ ぜんぶ あつめた',
+    icon: '🌈',
+    check: (s) => (s.bossCleared?.length ?? 0) >= 5,
+  },
+  {
+    id: 'manabi-master',
+    name: 'まなびマスター',
+    desc: '5つの光と しんでんチャレンジを ぜんぶ クリアした',
+    icon: '👑',
+    check: (s) => (s.bossCleared?.length ?? 0) >= 5 && s.templeCleared === true,
   },
 ]
 

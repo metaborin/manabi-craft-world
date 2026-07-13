@@ -3031,3 +3031,8 @@ export const QUESTIONS: Question[] = [
 export function getQuestions(grade: number, subject: string): Question[] {
   return QUESTIONS.filter((q) => q.grade === grade && q.subject === subject)
 }
+
+/** その教科の問題数（全学年合計）。ボスの有効化判定などに使う */
+export function subjectQuestionCount(subject: string): number {
+  return QUESTIONS.filter((q) => q.subject === subject).length
+}

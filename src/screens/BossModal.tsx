@@ -1,7 +1,29 @@
 import { useGameStore } from '../store/gameStore'
-import { BOSS_MAP, BOSS_RULES } from '../data/bosses'
+import { BOSSES, BOSS_MAP, BOSS_RULES, isBossEnabled } from '../data/bosses'
+import { SUBJECTS } from '../data/grades'
 import { UI } from '../data/uiText'
 import { Furigana } from '../components/Furigana'
+
+/** しんでんイントロに出す「5教科の光」の一覧 */
+function TempleLights({ bossCleared }: { bossCleared: string[] }) {
+  return (
+    <div className="temple-lights">
+      <div className="temple-lights-label">💡 {UI.temple.lightsLabel}</div>
+      <div className="temple-lights-row">
+        {BOSSES.map((b) => {
+          const lit = bossCleared.includes(b.id)
+          const soon = !isBossEnabled(b)
+          return (
+            <span key={b.id} className={`temple-light ${lit ? 'lit' : ''}`}>
+              {lit ? '💡' : '⚪'} {SUBJECTS[b.id].name}：
+              {lit ? UI.temple.lightOn : soon ? UI.temple.lightSoon : UI.temple.lightOff}
+            </span>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 /**
  * ボスチャレンジ／しんでんチャレンジの画面。
@@ -17,6 +39,7 @@ export function BossModal() {
   const bossUseHint = useGameStore((s) => s.bossUseHint)
   const bossNext = useGameStore((s) => s.bossNext)
   const closeBoss = useGameStore((s) => s.closeBoss)
+  const bossCleared = useGameStore((s) => s.save?.bossCleared)
   if (!boss) return null
 
   const isTemple = boss.kind === 'temple'
@@ -38,6 +61,7 @@ export function BossModal() {
             {name}
           </div>
           <p className="boss-intro-text">{isTemple ? UI.temple.intro : def?.intro}</p>
+          {isTemple && <TempleLights bossCleared={bossCleared ?? []} />}
           <p className="boss-rule">
             {total}もん中 {need}もん せいかいで クリア！ ヒントは 1回だけ つかえるよ
           </p>

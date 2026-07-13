@@ -13,7 +13,7 @@ import { getQuestions } from '../data/questions'
 import { SUBJECTS } from '../data/grades'
 import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, petLevel, TITLES, xpForLevel } from '../data/rewards'
 import { checkAreaUnlocks, isAreaUnlocked, NPC_AREA, type AreaDef } from '../data/areas'
-import { BOSS_MAP, BOSS_RULES, isTempleReady } from '../data/bosses'
+import { activeSubjectsText, BOSS_MAP, BOSS_RULES, bossState, isTempleReady } from '../data/bosses'
 import { missionsForDate, missionClaimed, missionDone } from '../data/missions'
 import { BUILD_TEMPLATES, templateCost, templateCell } from '../data/templates'
 import {
@@ -545,11 +545,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!save) return
     const def = BOSS_MAP[subject]
     if (!def) return
-    if (!def.available) {
-      get().showToast(UI.boss.preparing)
+    const state = bossState(save, def)
+    if (state === 'comingSoon') {
+      // じゅんび中のボス：問題画面には進まず、前向きな あんないだけ出す
+      playSound('talk')
+      get().showToast(UI.boss.comingSoon(def.icon, def.name, def.soonText, activeSubjectsText()))
       return
     }
-    if (!def.isReady(save)) {
+    if (state === 'locked') {
       const hint = def.remainingHint(save)
       get().showToast(`${UI.boss.notReady(def.name)} ${def.conditionText}${hint ? `（${hint}）` : ''}`)
       return
