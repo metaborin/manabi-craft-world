@@ -132,6 +132,20 @@ export const BADGES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
     check: (s) => (s.stats.bySubject.kokugo?.cleared ?? 0) >= 5,
   },
   {
+    id: 'sansu-15',
+    name: 'けいさんマスター',
+    desc: 'さんすうを 15もん クリアした',
+    icon: '🧮',
+    check: (s) => (s.stats.bySubject.sansu?.cleared ?? 0) >= 15,
+  },
+  {
+    id: 'kokugo-15',
+    name: 'ことばマスター',
+    desc: 'こくごを 15もん クリアした',
+    icon: '✍️',
+    check: (s) => (s.stats.bySubject.kokugo?.cleared ?? 0) >= 15,
+  },
+  {
     id: 'level-5',
     name: 'レベル5とうたつ',
     desc: 'レベル5に なった',
