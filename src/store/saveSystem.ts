@@ -43,6 +43,9 @@ export function createNewSave(name: string, avatar: number): SaveData {
     currentTitle: 'egg',
     playDays: 1,
     allMissionDays: 0,
+    bossCleared: [],
+    templeCleared: false,
+    endingSeen: false,
   }
 }
 
@@ -82,6 +85,10 @@ export function loadSave(slot: SlotId): SaveData | null {
     data.currentTitle ??= 'egg'
     data.playDays ??= 1
     data.allMissionDays ??= 0
+    // フェーズ3.5：ボス・しんでん・エンディングを補完
+    data.bossCleared ??= []
+    data.templeCleared ??= false
+    data.endingSeen ??= false
     // フェーズ2.8：建築を3段レイヤーに拡張。旧buildGrid（1段）は1だんめに変換
     if (!data.buildLayers) {
       data.buildLayers = emptyBuildLayers()

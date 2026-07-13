@@ -1,4 +1,5 @@
 import type { TreasureReward, WorldNPC } from '../types/game'
+import { ACTIVE_BOSSES } from './bosses'
 
 /** ワールドの広さ（-WORLD_HALF 〜 +WORLD_HALF） */
 export const WORLD_HALF = 22
@@ -192,6 +193,26 @@ export const WORLD_NPCS: WorldNPC[] = [
     label: 'たからばこ',
     pos: [12, 0, -19],
     color: '#c0392b',
+  },
+  // ============================================================
+  // エリアボスと まなびのしんでん（フェーズ3.5）
+  // ============================================================
+  ...ACTIVE_BOSSES.map(
+    (b): WorldNPC => ({
+      id: `boss-${b.id}`,
+      kind: 'boss',
+      subject: b.id,
+      label: b.name,
+      pos: b.pos,
+      color: b.color,
+    }),
+  ),
+  {
+    id: 'temple-gate',
+    kind: 'temple',
+    label: 'まなびの しんでん',
+    pos: [0, 0, -18],
+    color: '#ffd54f',
   },
 ]
 

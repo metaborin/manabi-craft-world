@@ -312,6 +312,14 @@ function NPCFigure({ npc }: { npc: WorldNPC }) {
     return <ChestFigure npc={npc} isNear={isNear} />
   }
 
+  if (npc.kind === 'boss') {
+    return <BossFigure npc={npc} isNear={isNear} showLabel={quality !== 'ultra'} />
+  }
+
+  if (npc.kind === 'temple') {
+    return <TempleFigure npc={npc} isNear={isNear} />
+  }
+
   return (
     <group position={npc.pos} scale={scale}>
       <group ref={group} rotation={[0, face, 0]}>
@@ -477,6 +485,174 @@ function ChestFigure({ npc, isNear }: { npc: WorldNPC; isNear: boolean }) {
   )
 }
 
+/**
+ * エリアボス。「たおす あいて」ではなく「元気にしてあげる なかま」。
+ * クリアすると にっこりした 明るい すがたになる。
+ */
+function BossFigure({
+  npc,
+  isNear,
+  showLabel,
+}: {
+  npc: WorldNPC
+  isNear: boolean
+  showLabel: boolean
+}) {
+  const group = useRef<THREE.Group>(null!)
+  const cleared = useGameStore(
+    (s) => (npc.subject ? (s.save?.bossCleared.includes(npc.subject) ?? false) : false),
+  )
+  const lightColor = useMemo(
+    () => '#' + new THREE.Color(npc.color).lerp(new THREE.Color('#ffffff'), 0.45).getHexString(),
+    [npc.color],
+  )
+
+  useFrame(({ clock }) => {
+    if (!group.current) return
+    // ふわふわ うかぶ（クリア後は うれしそうに はやめ）
+    const speed = cleared ? 2.6 : 1.4
+    group.current.position.y = 0.9 + Math.sin(clock.elapsedTime * speed) * 0.18
+    group.current.rotation.y = Math.sin(clock.elapsedTime * 0.6) * 0.25
+  })
+
+  return (
+    <group position={npc.pos}>
+      <group ref={group}>
+        {/* もやもやの からだ（クリアで あかるくなる） */}
+        <mesh>
+          <boxGeometry args={[1.3, 1.1, 1.2]} />
+          <meshLambertMaterial
+            color={cleared ? lightColor : npc.color}
+            transparent
+            opacity={cleared ? 0.95 : 0.7}
+          />
+        </mesh>
+        <mesh position={[0.5, 0.6, 0.3]}>
+          <boxGeometry args={[0.5, 0.5, 0.5]} />
+          <meshLambertMaterial color={npc.color} transparent opacity={cleared ? 0.9 : 0.55} />
+        </mesh>
+        <mesh position={[-0.55, 0.45, -0.2]}>
+          <boxGeometry args={[0.4, 0.4, 0.4]} />
+          <meshLambertMaterial color={npc.color} transparent opacity={cleared ? 0.9 : 0.55} />
+        </mesh>
+        {/* め（クリアで にっこり） */}
+        <mesh position={[-0.22, 0.12, 0.62]}>
+          <boxGeometry args={[0.14, cleared ? 0.06 : 0.18, 0.02]} />
+          <meshBasicMaterial color="#3a3a3a" />
+        </mesh>
+        <mesh position={[0.22, 0.12, 0.62]}>
+          <boxGeometry args={[0.14, cleared ? 0.06 : 0.18, 0.02]} />
+          <meshBasicMaterial color="#3a3a3a" />
+        </mesh>
+      </group>
+      {showLabel && (
+        <TextSprite
+          text={cleared ? `⭐ ${npc.label}` : npc.label}
+          position={[0, 2.6, 0]}
+          scale={1.05}
+          bg={isNear ? 'rgba(255,249,224,0.97)' : 'rgba(255,255,255,0.9)'}
+        />
+      )}
+      {isNear && <NearRing />}
+    </group>
+  )
+}
+
+/**
+ * まなびの しんでん。ボスをクリアするたびに 光のオーブが ともる。
+ * とびらは 2つの光が そろうと ひらく。
+ */
+function TempleFigure({ npc, isNear }: { npc: WorldNPC; isNear: boolean }) {
+  const crystal = useRef<THREE.Mesh>(null!)
+  const lights = useGameStore((s) => s.save?.bossCleared.length ?? 0)
+  const unlocked = useGameStore(
+    (s) =>
+      (s.save?.bossCleared.includes('kokugo') ?? false) &&
+      (s.save?.bossCleared.includes('sansu') ?? false),
+  )
+  const cleared = useGameStore((s) => s.save?.templeCleared ?? false)
+
+  useFrame(({ clock }) => {
+    if (crystal.current) {
+      crystal.current.rotation.y += 0.012
+      crystal.current.position.y = 1.5 + Math.sin(clock.elapsedTime * 1.6) * 0.12
+    }
+  })
+
+  return (
+    <group position={npc.pos}>
+      {/* だいざと クリスタル（話しかける ばしょ） */}
+      <mesh position={[0, 0.25, 0]}>
+        <cylinderGeometry args={[0.8, 1, 0.5, 6]} />
+        <meshLambertMaterial color="#cfc8bb" />
+      </mesh>
+      <mesh ref={crystal} position={[0, 1.5, 0]} rotation={[0, 0, Math.PI / 4]}>
+        <boxGeometry args={[0.5, 0.5, 0.5]} />
+        {unlocked ? (
+          <meshBasicMaterial color={cleared ? '#ffe082' : '#aef1ff'} />
+        ) : (
+          <meshLambertMaterial color="#8a94a0" />
+        )}
+      </mesh>
+
+      {/* しんでん本体（うしろに そびえる） */}
+      <group position={[0, 0, -2.5]}>
+        {/* ゆか */}
+        <mesh position={[0, 0.2, 0]}>
+          <boxGeometry args={[4.6, 0.4, 2.6]} />
+          <meshLambertMaterial color="#d9d2c5" />
+        </mesh>
+        {/* はしら */}
+        {[-1.8, -0.6, 0.6, 1.8].map((x) => (
+          <mesh key={x} position={[x, 1.5, 0.9]}>
+            <boxGeometry args={[0.4, 2.6, 0.4]} />
+            <meshLambertMaterial color="#efe8da" />
+          </mesh>
+        ))}
+        {/* やね */}
+        <mesh position={[0, 3, 0]}>
+          <boxGeometry args={[5, 0.5, 3]} />
+          <meshLambertMaterial color="#b9b2a6" />
+        </mesh>
+        <mesh position={[0, 3.5, 0]}>
+          <boxGeometry args={[4, 0.5, 2.4]} />
+          <meshLambertMaterial color="#cfc8bb" />
+        </mesh>
+        {/* とびら（ひらくと 光る すきまが 見える） */}
+        <mesh position={[unlocked ? -0.7 : 0, 1.2, 0.35]}>
+          <boxGeometry args={[1.4, 2, 0.2]} />
+          <meshLambertMaterial color="#8d6e63" />
+        </mesh>
+        {unlocked && (
+          <mesh position={[0.55, 1.2, 0.3]}>
+            <boxGeometry args={[0.9, 1.9, 0.1]} />
+            <meshBasicMaterial color="#fff3b0" />
+          </mesh>
+        )}
+        {/* まなびの光オーブ（ボスクリアで ともる。将来5つまで） */}
+        {[-1.5, 1.5].map((x, i) => (
+          <mesh key={i} position={[x, 3.9, 0]}>
+            <sphereGeometry args={[0.28, 8, 8]} />
+            {i < lights ? (
+              <meshBasicMaterial color="#ffe082" />
+            ) : (
+              <meshLambertMaterial color="#9aa0a6" />
+            )}
+          </mesh>
+        ))}
+      </group>
+
+      <TextSprite
+        text={unlocked ? `🏛️ ${npc.label}` : `🔒 ${npc.label}`}
+        position={[0, 3.2, 0]}
+        scale={1.2}
+        bg="rgba(255,249,224,0.95)"
+      />
+      {isNear && <NearRing />}
+    </group>
+  )
+}
+
 /** 近くにいるときに足元に出る白いリング */
 function NearRing() {
   const ref = useRef<THREE.Mesh>(null!)
@@ -618,8 +794,8 @@ export function WorldCanvas({ active }: { active: boolean }) {
   countRender('WorldCanvas')
   // 描画品質：normal / lite（けいりょうモード） / ultra（内部用の超軽量）
   const quality = useGameStore((s) => getQuality(s.settings))
-  // クエストや会話中は3Dを止めて、ボタン反応にCPU/GPUをまわす
-  const paused = useGameStore((s) => s.quest !== null || s.dialog !== null)
+  // クエスト・会話・ボスチャレンジ中は3Dを止めて、ボタン反応にCPU/GPUをまわす
+  const paused = useGameStore((s) => s.quest !== null || s.dialog !== null || s.boss !== null)
   const frameloop = !active || paused ? 'demand' : 'always'
 
   return (

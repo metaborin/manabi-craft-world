@@ -304,6 +304,64 @@ export const UI = {
     splash: 'ぷはっ！ みずから あがったよ💦',
   },
 
+  /** エリアボス・しんでんチャレンジ */
+  boss: {
+    challenge: 'ボスに ちょうせん',
+    start: 'ちょうせん スタート！',
+    later: 'やめておく',
+    ready: '✨ もう ちょうせんできるよ！',
+    gaugeLabel: 'まなびゲージ',
+    hintButton: '💡 ヒント（1回だけ）',
+    hintUsed: 'ヒントは つかったよ',
+    correctFeedback: ['やった！ ボスが 元気に なってきた！✨', 'いいね！ 光が ふえたよ！🌟', 'せいかい！ その ちょうし！💪'],
+    wrongFeedback: 'だいじょうぶ！ つぎ いこう！',
+    answerWas: 'こたえは',
+    next: 'つぎへ ▶',
+    clearHeading: 'クリア！🎉',
+    clearSub: 'まなびの 光が もどった！',
+    failHeading: 'もう少し！',
+    failSub: 'また ちょうせんしよう。ペットも おうえんしているよ🐾',
+    retry: 'もう一度 ちょうせん',
+    backToWorld: 'ワールドへ もどる',
+    rewardHeading: 'とくべつな ごほうび！',
+    lightGet: '💡 まなびの光を ゲット！',
+    alreadyCleared: 'クリアずみ！ もう一度 あそべるよ',
+    notReady: (name: string) => `${name}は まだ ねむっているみたい…`,
+    preparing: 'じゅんびちゅう！ おたのしみに🌟',
+  },
+
+  temple: {
+    name: 'まなびの しんでん',
+    gateLabel: '🏛️ まなびの しんでん',
+    locked: '🔒 しんでんの とびらは とじている…',
+    openPrompt: 'とびらが ひかっている…。しんでんチャレンジに ちょうせんする？',
+    challengeName: 'しんでんチャレンジ',
+    intro: 'ようこそ、まなびの しんでんへ。ことばと かずの 力を みせて、ワールドに 光を とりもどそう！',
+    outro: 'しんでんが まばゆく かがやいた…！',
+    lightsLabel: 'まなびの光',
+  },
+
+  /** エンディング */
+  ending: {
+    slides: [
+      { icon: '✨', text: 'まなびの 光が もどったよ！' },
+      { icon: '🌍', text: 'ことばと かずの 力で、\nワールドが 元気に なりました。' },
+      { icon: '🚀', text: 'これからも、あたらしい まなびを\n見つけに 行こう！' },
+    ],
+    congrats: 'クリア おめでとう！',
+    keepPlaying: 'まだまだ あそぶ！',
+    next: 'つぎへ ▶',
+  },
+
+  /** クリア後の「つぎにすること」 */
+  postGame: {
+    badges: (n: number) => `まだ あつめていない バッジが ${n}こ あるよ🏅`,
+    treasure: 'まだ みつけていない たからばこが あるよ🎁',
+    build: 'じぶんの 町を もっと つくろう🏠',
+    pet: 'ペットと いっしょに たんけんしよう🐾',
+    future: 'つぎは りかエリアの ボスが めをさますかも…？🌟',
+  },
+
   zukan: {
     heading: '📖 コレクション',
     blocks: '🧱 あつめた ブロック',

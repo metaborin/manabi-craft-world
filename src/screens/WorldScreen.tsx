@@ -10,12 +10,14 @@ import { DialogBox } from '../components/DialogBox'
 import { FxOverlay } from '../components/FxOverlay'
 import { FpsMeter } from '../components/FpsMeter'
 import { QuestModal } from './QuestModal'
+import { BossModal } from './BossModal'
 import { UI } from '../data/uiText'
 import { countRender } from '../game/perf'
 
 export function WorldScreen({ active }: { active: boolean }) {
   countRender('WorldScreen')
   const quest = useGameStore((s) => s.quest)
+  const bossOpen = useGameStore((s) => s.boss !== null)
   const touchSetting = useGameStore((s) => s.settings.touchButtons)
   const dragRef = useRef<{ id: number; x: number } | null>(null)
 
@@ -72,6 +74,7 @@ export function WorldScreen({ active }: { active: boolean }) {
       <FxOverlay />
       <Toast />
       {quest && <QuestModal />}
+      {bossOpen && <BossModal />}
       {import.meta.env.DEV && <FpsMeter />}
     </div>
   )

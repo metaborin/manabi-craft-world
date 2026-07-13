@@ -71,6 +71,20 @@ export const UNLOCKABLE_AREAS: AreaDef[] = [
     },
     gatePos: [-11.5, 0, 14.5],
   },
+  {
+    id: 'temple',
+    name: 'まなびの しんでん',
+    icon: '🏛️',
+    isUnlocked: (s) => s.bossCleared.includes('kokugo') && s.bossCleared.includes('sansu'),
+    conditionText: 'こくごボスと さんすうボスを クリアすると とびらが ひらくよ',
+    remainingHint: (s) => {
+      const left: string[] = []
+      if (!s.bossCleared.includes('kokugo')) left.push('こくごボス')
+      if (!s.bossCleared.includes('sansu')) left.push('さんすうボス')
+      return left.length > 0 ? `${left.join('と ')}を クリアしよう` : null
+    },
+    gatePos: [0, 0, -16.5],
+  },
 ]
 
 export const AREA_MAP: Record<string, AreaDef> = Object.fromEntries(

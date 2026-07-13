@@ -132,6 +132,9 @@ export function StatusScreen() {
             <span className="explore-stat">
               🎯 ミッションたっせい {save.totalMissionsCompleted}かい
             </span>
+            <span className="explore-stat">
+              💡 まなびの光 {save.bossCleared.length}／2
+            </span>
           </div>
           <div className="bottom-row">
             <button className="btn btn-primary" onClick={() => setScreen('mission')}>

@@ -12,7 +12,8 @@ import type {
 import { getQuestions } from '../data/questions'
 import { SUBJECTS } from '../data/grades'
 import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, petLevel, TITLES, xpForLevel } from '../data/rewards'
-import { checkAreaUnlocks, NPC_AREA, type AreaDef } from '../data/areas'
+import { checkAreaUnlocks, isAreaUnlocked, NPC_AREA, type AreaDef } from '../data/areas'
+import { BOSS_MAP, BOSS_RULES, isTempleReady } from '../data/bosses'
 import { missionsForDate, missionClaimed, missionDone } from '../data/missions'
 import { BUILD_TEMPLATES, templateCost, templateCell } from '../data/templates'
 import {
@@ -64,6 +65,29 @@ export interface QuestSession {
   bonusMessages: string[]
 }
 
+/** ボス・しんでんチャレンジのセッション */
+export interface BossSession {
+  kind: 'boss' | 'temple'
+  /** ボスのときの教科（しんでんはnull） */
+  subject: Subject | null
+  questions: Question[]
+  index: number
+  /** せいかい数・まちがい数 */
+  correct: number
+  wrong: number
+  /** ヒントはチャレンジ中1回だけ */
+  hintUsed: boolean
+  /** いまの問題でヒントを見ているか */
+  hintShown: boolean
+  phase: 'intro' | 'ask' | 'feedback' | 'clear' | 'fail'
+  lastCorrect: boolean
+  feedbackMsg: string
+  /** はじめてのクリアか（ごほうび・エンディング用） */
+  firstClear: boolean
+  /** クリア画面に出すごほうびの一覧 */
+  rewardText: string[]
+}
+
 interface GameState {
   screen: Screen
   slot: SlotId | null
@@ -76,6 +100,10 @@ interface GameState {
   quest: QuestSession | null
   /** 会話ウィンドウ（NPC・看板のセリフ表示） */
   dialog: { npc: WorldNPC; index: number } | null
+  /** ボス・しんでんチャレンジ */
+  boss: BossSession | null
+  /** エンディング表示中か */
+  endingOpen: boolean
   /** 報酬などの演出イベント（FxOverlayが拾って表示する） */
   fx: { id: number; type: FxType; text?: string } | null
   /** エリア解放のお祝い表示 */
@@ -105,6 +133,15 @@ interface GameState {
   dialogNext: () => void
   closeDialog: () => void
   acceptQuestFromDialog: () => void
+  /** ボスチャレンジ */
+  startBoss: (subject: Subject) => void
+  startTemple: () => void
+  bossStartQuestions: () => void
+  bossAnswer: (choice: number) => void
+  bossUseHint: () => void
+  bossNext: () => void
+  closeBoss: () => void
+  finishEnding: () => void
   triggerFx: (type: FxType, text?: string) => void
   startQuest: (subject: Subject) => void
   answerQuestion: (choice: number) => void
@@ -305,6 +342,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   nearby: null,
   quest: null,
   dialog: null,
+  boss: null,
+  endingOpen: false,
   fx: null,
   areaUnlock: null,
   petSense: false,
@@ -383,8 +422,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   interact: () => {
-    const { nearby, save, quest, dialog } = get()
-    if (!nearby || !save || quest || dialog) return
+    const { nearby, save, quest, dialog, boss } = get()
+    if (!nearby || !save || quest || dialog || boss) return
     // チュートリアル③：しらべるを おした
     get().advanceTutorial(2)
 
@@ -428,6 +467,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       case 'shop':
         get().bumpMission('shopVisited')
         set({ screen: 'shop' })
+        break
+      case 'boss':
+        if (nearby.subject) get().startBoss(nearby.subject)
+        break
+      case 'temple':
+        get().startTemple()
         break
       case 'build':
         set({ screen: 'build' })
@@ -489,6 +534,218 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { dialog } = get()
     if (!dialog) return
     set({ dialog: { ...dialog, index: dialog.index + 1 } })
+  },
+
+  // ============================================================
+  // ボス・しんでんチャレンジ
+  // ============================================================
+
+  startBoss: (subject) => {
+    const { save } = get()
+    if (!save) return
+    const def = BOSS_MAP[subject]
+    if (!def) return
+    if (!def.available) {
+      get().showToast(UI.boss.preparing)
+      return
+    }
+    if (!def.isReady(save)) {
+      const hint = def.remainingHint(save)
+      get().showToast(`${UI.boss.notReady(def.name)} ${def.conditionText}${hint ? `（${hint}）` : ''}`)
+      return
+    }
+    // その学年・教科から5問えらぶ
+    const pool = getQuestions(save.grade, subject)
+    if (pool.length < BOSS_RULES.bossQuestions) {
+      get().showToast(UI.boss.preparing)
+      return
+    }
+    const questions = [...pool].sort(() => Math.random() - 0.5).slice(0, BOSS_RULES.bossQuestions)
+    playSound('talk')
+    set({
+      boss: {
+        kind: 'boss',
+        subject,
+        questions,
+        index: 0,
+        correct: 0,
+        wrong: 0,
+        hintUsed: false,
+        hintShown: false,
+        phase: 'intro',
+        lastCorrect: false,
+        feedbackMsg: '',
+        firstClear: !save.bossCleared.includes(subject),
+        rewardText: [],
+      },
+    })
+  },
+
+  startTemple: () => {
+    const { save } = get()
+    if (!save) return
+    if (!isAreaUnlocked(save, 'temple') || !isTempleReady(save)) {
+      const left: string[] = []
+      if (!save.bossCleared.includes('kokugo')) left.push('こくごボス')
+      if (!save.bossCleared.includes('sansu')) left.push('さんすうボス')
+      get().showToast(
+        `${UI.temple.locked} ${left.length > 0 ? `${left.join('と ')}を クリアしよう` : ''}`,
+      )
+      return
+    }
+    // こくご2問＋さんすう2問（その学年から）
+    const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - 0.5)
+    const kokugo = shuffle(getQuestions(save.grade, 'kokugo')).slice(0, 2)
+    const sansu = shuffle(getQuestions(save.grade, 'sansu')).slice(0, 2)
+    const questions = shuffle([...kokugo, ...sansu])
+    if (questions.length < BOSS_RULES.templeQuestions) {
+      get().showToast(UI.boss.preparing)
+      return
+    }
+    playSound('talk')
+    set({
+      boss: {
+        kind: 'temple',
+        subject: null,
+        questions,
+        index: 0,
+        correct: 0,
+        wrong: 0,
+        hintUsed: false,
+        hintShown: false,
+        phase: 'intro',
+        lastCorrect: false,
+        feedbackMsg: '',
+        firstClear: !save.templeCleared,
+        rewardText: [],
+      },
+    })
+  },
+
+  bossStartQuestions: () => {
+    const { boss } = get()
+    if (!boss || boss.phase !== 'intro') return
+    set({ boss: { ...boss, phase: 'ask' } })
+  },
+
+  bossAnswer: (choice) => {
+    const { boss } = get()
+    if (!boss || boss.phase !== 'ask') return
+    const q = boss.questions[boss.index]
+    const isCorrect = choice === q.answer
+    if (isCorrect) {
+      playSound('correct')
+      const msgs = UI.boss.correctFeedback
+      set({
+        boss: {
+          ...boss,
+          correct: boss.correct + 1,
+          phase: 'feedback',
+          lastCorrect: true,
+          feedbackMsg: msgs[Math.floor(Math.random() * msgs.length)],
+        },
+      })
+    } else {
+      playSound('wrong')
+      set({
+        boss: {
+          ...boss,
+          wrong: boss.wrong + 1,
+          phase: 'feedback',
+          lastCorrect: false,
+          feedbackMsg: `${UI.boss.wrongFeedback}（${UI.boss.answerWas}「${q.choices[q.answer]}」）`,
+        },
+      })
+    }
+  },
+
+  bossUseHint: () => {
+    const { boss } = get()
+    if (!boss || boss.phase !== 'ask' || boss.hintUsed) return
+    set({ boss: { ...boss, hintUsed: true, hintShown: true } })
+  },
+
+  bossNext: () => {
+    const { boss, save } = get()
+    if (!boss || boss.phase !== 'feedback' || !save) return
+    const rules = boss.kind === 'boss' ? BOSS_RULES.bossQuestions : BOSS_RULES.templeQuestions
+    const need = boss.kind === 'boss' ? BOSS_RULES.bossNeed : BOSS_RULES.templeNeed
+
+    // 3問せいかい → その場でクリア！
+    if (boss.correct >= need) {
+      const rewardText: string[] = []
+      let petLeveled = false
+      const isTemple = boss.kind === 'temple'
+      const first = boss.firstClear
+      mutateSave(get, set, (s) => {
+        const coins = isTemple ? (first ? 50 : 15) : first ? 30 : 10
+        const xp = isTemple ? (first ? 60 : 20) : first ? 40 : 15
+        s.coins += coins
+        rewardText.push(`🪙 +${coins}`)
+        addXp(s, xp)
+        rewardText.push(`✨ けいけんち +${xp}`)
+        petLeveled = addPetExpTo(s, first ? (isTemple ? 5 : 3) : 1)
+        if (s.pet) rewardText.push(`🐾 +${first ? (isTemple ? 5 : 3) : 1}`)
+        if (first) {
+          const blocks: Record<string, number> = isTemple
+            ? { gem: 2, gold: 2 }
+            : boss.subject === 'kokugo'
+              ? { bookshelf: 2, gold: 1 }
+              : { star: 2, gold: 1 }
+          for (const [id, n] of Object.entries(blocks)) {
+            s.blocks[id] = (s.blocks[id] ?? 0) + n
+            const def = BLOCK_MAP[id]
+            if (def) rewardText.push(`${def.emoji} ${def.name}×${n}`)
+          }
+          if (isTemple) {
+            s.templeCleared = true
+          } else if (boss.subject && !s.bossCleared.includes(boss.subject)) {
+            s.bossCleared.push(boss.subject)
+            rewardText.push(UI.boss.lightGet)
+          }
+        }
+        checkBadges(s)
+      })
+      playSound('levelup')
+      petCelebrate(3000)
+      if (petLeveled) setTimeout(() => notifyPetLevelUp(get), 2000)
+      set({ boss: { ...get().boss!, phase: 'clear', rewardText } })
+      return
+    }
+
+    // もう3問せいかいが むりになったら、やさしく おわる
+    const impossible = boss.wrong > rules - need
+    const finished = boss.index + 1 >= rules
+    if (impossible || finished) {
+      set({ boss: { ...boss, phase: 'fail' } })
+      petCelebrate(1500) // おうえん
+      return
+    }
+    set({ boss: { ...boss, index: boss.index + 1, phase: 'ask', hintShown: false } })
+  },
+
+  closeBoss: () => {
+    const { boss, save } = get()
+    const wasTempleFirstClear =
+      boss?.kind === 'temple' && boss.phase === 'clear' && boss.firstClear
+    set({ boss: null })
+    // しんでん はじめてクリア → エンディングへ
+    if (wasTempleFirstClear && save && !save.endingSeen) {
+      set({ endingOpen: true })
+    }
+  },
+
+  finishEnding: () => {
+    set({ endingOpen: false })
+    const { save } = get()
+    if (save && !save.endingSeen) {
+      mutateSave(get, set, (s) => {
+        s.endingSeen = true
+        checkBadges(s)
+      })
+      petCelebrate(4000)
+      playFx('levelup', '🌟 クリア おめでとう！')
+    }
   },
 
   closeDialog: () => set({ dialog: null }),
@@ -934,6 +1191,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       quest: null,
       nearby: null,
       dialog: null,
+      boss: null,
+      endingOpen: false,
       fx: null,
       areaUnlock: null,
       petSense: false,

@@ -2245,6 +2245,130 @@ ruby rt {
   }
 }
 
+/* ============ フェーズ3.5：ボス・しんでん・エンディング ============ */
+
+.boss-overlay {
+  background: rgba(46, 40, 70, 0.62);
+}
+.boss-card {
+  padding: 0 0 6px;
+}
+.boss-card.boss-intro,
+.boss-card.boss-clear {
+  padding: 30px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.boss-icon-big {
+  font-size: 74px;
+  animation: block-float 3s ease-in-out infinite;
+}
+.boss-icon-big.happy {
+  animation: pop 0.5s, block-float 1.6s ease-in-out infinite;
+}
+.boss-name {
+  font-size: 26px;
+  font-weight: bold;
+}
+.boss-intro-text {
+  font-size: 18px;
+  line-height: 1.9;
+}
+.boss-rule {
+  background: var(--cream);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.boss-header {
+  border-radius: 24px 24px 0 0;
+}
+.boss-gauge-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 16px 0;
+  flex-wrap: wrap;
+}
+.boss-gauge-label {
+  font-size: 13px;
+  font-weight: bold;
+  color: #8a7767;
+}
+.boss-gauge {
+  display: flex;
+  gap: 6px;
+  font-size: 24px;
+}
+.gauge-orb {
+  filter: grayscale(1) opacity(0.5);
+  transition: filter 0.3s, transform 0.3s;
+}
+.gauge-orb.lit {
+  filter: none;
+  animation: pop 0.45s;
+}
+.boss-progress {
+  font-size: 13px;
+  font-weight: bold;
+  color: #8a7767;
+}
+.correct-mark.soft {
+  font-size: 48px;
+}
+.feedback-banner.ok {
+  background: #e8f8ec;
+  color: #1e8e3e;
+}
+/* クリア時の光 */
+.boss-clear-glow {
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(circle, rgba(255, 236, 150, 0.55) 0%, transparent 60%);
+  animation: rays-spin 10s linear infinite;
+  pointer-events: none;
+}
+.boss-clear h2 {
+  position: relative;
+  font-size: 30px;
+}
+.lite .boss-clear-glow {
+  display: none;
+}
+.lite .boss-icon-big {
+  animation: none;
+}
+
+/* エンディング */
+.ending-overlay {
+  background: linear-gradient(#2e3f57, #6a5a8e);
+}
+.ending-card {
+  position: relative;
+  overflow: hidden;
+}
+.ending-rays {
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(circle, rgba(255, 224, 130, 0.4) 0%, transparent 55%);
+  animation: rays-spin 12s linear infinite;
+  pointer-events: none;
+}
+.ending-congrats {
+  position: relative;
+  font-size: 28px;
+}
+.lite .ending-rays {
+  display: none;
+}
+
 /* ---- ホバー演出（マウス端末のみ） ---- */
 @media (hover: hover) {
   .btn {

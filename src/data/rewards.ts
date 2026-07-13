@@ -250,6 +250,41 @@ export const BADGES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
     icon: '👑',
     check: (s) => (s.pet ? petLevel(s.pet.growth) >= 5 : false),
   },
+  {
+    id: 'boss-kokugo',
+    name: 'ことばボス クリア',
+    desc: '「ことばの もやもや」を 元気にした',
+    icon: '🌫️',
+    check: (s) => s.bossCleared?.includes('kokugo') ?? false,
+  },
+  {
+    id: 'boss-sansu',
+    name: 'かずボス クリア',
+    desc: '「かずの からくり」を なおした',
+    icon: '⚙️',
+    check: (s) => s.bossCleared?.includes('sansu') ?? false,
+  },
+  {
+    id: 'lights-2',
+    name: 'まなびの光',
+    desc: 'まなびの光を 2つ あつめた',
+    icon: '💡',
+    check: (s) => (s.bossCleared?.length ?? 0) >= 2,
+  },
+  {
+    id: 'temple-clear',
+    name: 'しんでんチャレンジ クリア',
+    desc: 'まなびの しんでんの チャレンジを クリアした',
+    icon: '🏛️',
+    check: (s) => s.templeCleared === true,
+  },
+  {
+    id: 'ending-1',
+    name: 'はじめての エンディング',
+    desc: 'ワールドに まなびの光を とりもどした',
+    icon: '🎬',
+    check: (s) => s.endingSeen === true,
+  },
 ]
 
 /**
@@ -297,6 +332,34 @@ export const TITLES: (BadgeDef & { check: (s: SaveData) => boolean })[] = [
     desc: 'さんすうを 5もん クリアした',
     icon: '🔢',
     check: (s) => (s.stats.bySubject.sansu?.cleared ?? 0) >= 5,
+  },
+  {
+    id: 'kotoba-yusha',
+    name: 'ことばの ゆうしゃ',
+    desc: 'こくごボスを クリアした',
+    icon: '🗡️',
+    check: (s) => s.bossCleared?.includes('kokugo') ?? false,
+  },
+  {
+    id: 'kazu-yusha',
+    name: 'かずの ゆうしゃ',
+    desc: 'さんすうボスを クリアした',
+    icon: '🛡️',
+    check: (s) => s.bossCleared?.includes('sansu') ?? false,
+  },
+  {
+    id: 'temple-opener',
+    name: 'しんでんを ひらいた こ',
+    desc: 'まなびの しんでんの とびらを ひらいた',
+    icon: '🏛️',
+    check: (s) => (s.bossCleared?.length ?? 0) >= 2,
+  },
+  {
+    id: 'world-hero',
+    name: 'ワールドを げんきにした こ',
+    desc: 'エンディングを むかえた',
+    icon: '🌟',
+    check: (s) => s.endingSeen === true,
   },
 ]
 

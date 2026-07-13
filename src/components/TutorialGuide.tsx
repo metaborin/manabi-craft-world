@@ -1,8 +1,10 @@
 import { useGameStore } from '../store/gameStore'
 import { GRADES, SUBJECTS } from '../data/grades'
-import { petExpToNext, petLevel } from '../data/rewards'
+import { BADGES, petExpToNext, petLevel } from '../data/rewards'
 import { missionsForDate, missionClaimed, missionDone, missionProgress } from '../data/missions'
 import { UNLOCKABLE_AREAS } from '../data/areas'
+import { ACTIVE_BOSSES, isTempleReady } from '../data/bosses'
+import { TREASURE_COUNT } from '../data/world'
 import { todayString } from '../store/saveSystem'
 import { UI } from '../data/uiText'
 import { countRender } from '../game/perf'
@@ -43,21 +45,41 @@ export function TutorialGuide() {
     )
   }
 
-  // チュートリアル後：ミッション → エリア解放 → じゆうにあそぶ
+  // チュートリアル後：ミッション → ボス・しんでん → エリア解放 → クリア後の目標
   const missions = missionsForDate(todayString())
   const claimable = missions.find((m) => missionDone(save, m) && !missionClaimed(save, m))
   const nextMission = missions.find((m) => !missionDone(save, m))
-  const nextArea = UNLOCKABLE_AREAS.find((a) => !save.unlockedAreas.includes(a.id))
+  const nextArea = UNLOCKABLE_AREAS.find(
+    (a) => a.id !== 'temple' && !save.unlockedAreas.includes(a.id),
+  )
+  const readyBoss = ACTIVE_BOSSES.find(
+    (b) => !save.bossCleared.includes(b.id) && b.isReady(save),
+  )
+  const templeReady = isTempleReady(save) && !save.templeCleared
 
   let action: string
   if (save.pet && petExpToNext(save.pet.growth) <= 2) {
     action = UI.petLevel.toNext(petExpToNext(save.pet.growth))
   } else if (claimable) {
     action = 'ミッション たっせい！🎁 ここを タップして うけとろう'
+  } else if (templeReady) {
+    action = '🏛️ しんでんの とびらが ひらいた！ チャレンジに いこう！'
+  } else if (readyBoss) {
+    action = `${readyBoss.icon}「${readyBoss.name}」に ちょうせんできるよ！`
   } else if (nextMission) {
     action = `${nextMission.title}（${UI.mission.left(nextMission.goal - missionProgress(save, nextMission))}）`
   } else if (nextArea) {
     action = `${nextArea.icon} ${UI.area.soon} ${nextArea.remainingHint(save) ?? ''}`
+  } else if (save.templeCleared) {
+    // クリア後：のこりの あそびを 日がわりで おすすめ
+    const badgesLeft = BADGES.length - save.badges.length
+    const chestsLeft = TREASURE_COUNT - save.openedChests.length
+    if (badgesLeft > 0 && new Date().getDay() % 2 === 0) action = UI.postGame.badges(badgesLeft)
+    else if (chestsLeft > 0) action = UI.postGame.treasure
+    else {
+      const rotate = [UI.postGame.build, UI.postGame.pet, UI.postGame.future]
+      action = rotate[new Date().getDay() % rotate.length]
+    }
   } else {
     action = 'きょうの ミッション ぜんぶクリア！🌟 じゆうに あそぼう'
   }

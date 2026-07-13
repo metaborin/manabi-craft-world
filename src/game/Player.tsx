@@ -44,6 +44,7 @@ export function Player() {
   const petGrowth = useGameStore((s) => s.save?.pet?.growth ?? 0)
   const questOpen = useGameStore((s) => s.quest !== null)
   const dialogOpen = useGameStore((s) => s.dialog !== null)
+  const bossOpen = useGameStore((s) => s.boss !== null)
   const avatarDef = AVATARS[avatar % AVATARS.length]
   const color = avatarDef.color
   const petDef = petType ? PET_MAP[petType] : null
@@ -63,7 +64,7 @@ export function Player() {
       lastSafe.current = [0, 5]
     }
 
-    const paused = questOpen || dialogOpen
+    const paused = questOpen || dialogOpen || bossOpen
     const buildLayers = useGameStore.getState().save?.buildLayers ?? null
 
     // 入力の合成（キーボード＋タッチパッド）

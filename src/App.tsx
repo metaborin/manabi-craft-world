@@ -10,6 +10,7 @@ import { WorldScreen } from './screens/WorldScreen'
 import { Toast } from './components/Toast'
 import { StoryOverlay } from './components/StoryOverlay'
 import { AreaUnlockOverlay } from './components/AreaUnlockOverlay'
+import { EndingOverlay } from './components/EndingOverlay'
 
 // あまり開かない画面は遅延読み込みにして、最初の読み込みを軽くする
 const StatusScreen = lazy(() =>
@@ -43,6 +44,12 @@ const TAP_SOUND_EXCLUDE = ['.choice-btn', '.interact-btn', '.touch-search', '.to
 /** 遅延読み込み中に一瞬だけ出す表示 */
 function LazyFallback() {
   return <div className="screen panel-screen lazy-loading">よみこみちゅう…</div>
+}
+
+/** エンディング表示（しんでんチャレンジ はじめてクリアのあと） */
+function EndingGate() {
+  const open = useGameStore((s) => s.endingOpen)
+  return open ? <EndingOverlay /> : null
 }
 
 export default function App() {
@@ -99,8 +106,9 @@ export default function App() {
         {screen === 'mission' && <MissionScreen />}
         {screen === 'help' && <HelpScreen />}
       </Suspense>
-      {/* オープニングとエリア解放のお祝いは、どの画面よりも上に出す */}
+      {/* オープニング・エンディング・エリア解放のお祝いは、どの画面よりも上に出す */}
       {showStory && <StoryOverlay />}
+      <EndingGate />
       <AreaUnlockOverlay />
       {/* ワールド画面以外でもトーストを出せるように */}
       {screen !== 'world' && <Toast />}

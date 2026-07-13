@@ -147,6 +147,12 @@ export interface SaveData {
   playDays: number
   /** きょうのミッションを全部クリアした日数 */
   allMissionDays: number
+  /** クリアしたボスの教科ID（'kokugo','sansu'…）＝あつめた「まなびの光」 */
+  bossCleared: string[]
+  /** しんでんチャレンジをクリアしたか */
+  templeCleared: boolean
+  /** エンディングを見たか */
+  endingSeen: boolean
 }
 
 /** きょうのミッション・ボーナスの状態 */
@@ -210,7 +216,7 @@ export type Screen =
 /** ワールド内で話しかけられるもの（NPC・看板・宝箱など） */
 export interface WorldNPC {
   id: string
-  kind: 'quest' | 'shop' | 'build' | 'sign' | 'chest' | 'treasure' | 'guide'
+  kind: 'quest' | 'shop' | 'build' | 'sign' | 'chest' | 'treasure' | 'guide' | 'boss' | 'temple'
   subject?: Subject
   label: string
   /** 話しかけたときのセリフ（sign用） */
