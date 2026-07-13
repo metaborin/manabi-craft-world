@@ -127,7 +127,7 @@ export function QuestModal() {
       <div className="quest-card">
         <div className="quest-header" style={{ background: subject.color }}>
           <span className="quest-subject">
-            {subject.icon} {subject.name}（{q.unit}）
+            {subject.icon} {subject.name}（<Furigana text={q.unit} />）
           </span>
           <span className="quest-dots">
             {quest.questions.map((_, i) => (
