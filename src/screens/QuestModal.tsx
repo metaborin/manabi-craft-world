@@ -141,7 +141,7 @@ export function QuestModal() {
 
         <div className="quest-body">
           <p className="quest-question">
-            <Furigana text={q.question} />
+            <Furigana text={q.question} readingTarget={q.readingTarget} />
           </p>
           {q.visual && <div className="quest-visual">{q.visual}</div>}
 

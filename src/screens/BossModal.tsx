@@ -174,7 +174,7 @@ export function BossModal() {
           {boss.phase === 'ask' && (
             <>
               <p className="quest-question">
-                <Furigana text={q.question} />
+                <Furigana text={q.question} readingTarget={q.readingTarget} />
               </p>
               {q.visual && <div className="quest-visual">{q.visual}</div>}
               {boss.hintShown && (
