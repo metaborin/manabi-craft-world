@@ -2,7 +2,7 @@ import { useGameStore } from '../store/gameStore'
 import { BLOCKS, BADGES, PET_MAP, petLevel, petStage } from '../data/rewards'
 import { CHARACTER_NPCS, TREASURE_COUNT } from '../data/world'
 import { ALL_AREAS, AREA_MAP } from '../data/areas'
-import { BOSSES, activeSubjectsText, bossState, isTempleReady } from '../data/bosses'
+import { BOSSES, activeSubjectsText, bossState, isBossEnabled, isTempleReady } from '../data/bosses'
 import { SUBJECTS } from '../data/grades'
 import { AVATARS } from '../data/avatars'
 import { UI } from '../data/uiText'
@@ -149,10 +149,17 @@ export function ZukanScreen() {
           <div className="status-row-label">
             ✨ まなびの光（{save.bossCleared.length}／{BOSSES.length}）
           </div>
-          <div className="status-sub">{UI.temple.lightsNote(activeSubjectsText())}</div>
+          <div className="status-sub">{UI.temple.lightsNote(activeSubjectsText(save.grade))}</div>
           <div className="boss-list">
             {BOSSES.map((b) => {
               const state = bossState(save, b)
+              // クリア済みでも、いまの学年で あそべないボス（例: 小1で見た理科）は
+              // 「なんども あそべるよ」ではなく「◯年生で クリア！」と出す。
+              const playableHere = isBossEnabled(b, save.grade)
+              const clearedNote =
+                playableHere || !b.availableGrades
+                  ? UI.boss.playAgainHint
+                  : UI.boss.clearedGradeNote(b.availableGrades.map((g) => `${g}年生`).join('・'))
               return (
                 <div key={b.id} className={`boss-row ${state}`}>
                   <span className="boss-row-light">
@@ -163,7 +170,7 @@ export function ZukanScreen() {
                       {SUBJECTS[b.id].icon} {SUBJECTS[b.id].name}：{b.icon} {b.name}
                     </div>
                     <div className="boss-row-sub">
-                      {state === 'cleared' && `${UI.boss.stateCleared}　${UI.boss.playAgainHint}`}
+                      {state === 'cleared' && `${UI.boss.stateCleared}　${clearedNote}`}
                       {state === 'available' && `${UI.boss.stateAvailable}　${UI.boss.rewardHint}`}
                       {state === 'locked' &&
                         `${b.conditionText}${b.remainingHint(save) ? `（${b.remainingHint(save)}）` : ''}`}

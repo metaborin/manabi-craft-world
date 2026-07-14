@@ -328,6 +328,11 @@ export const UI = {
     alreadyCleared: 'クリアずみ！ もう一度 あそべるよ',
     notReady: (name: string) => `${name}は まだ ねむっているみたい…`,
     preparing: 'じゅんびちゅう！ おたのしみに🌟',
+    /** ほかの学年でクリア済みだが、いまの学年では あそべないボスの案内 */
+    clearedElsewhere: (name: string, gradeLabel: string) =>
+      `${name}は もう クリアずみ！ ${gradeLabel}で また あそべるよ🌟`,
+    /** 図鑑などで「◯年生でクリアした」ことを短く示す */
+    clearedGradeNote: (gradeLabel: string) => `${gradeLabel}で クリア！`,
     /** じゅんび中のボスに はなしかけたときの あんない */
     comingSoon: (icon: string, name: string, soon: string, nowSubjects: string) =>
       `${icon}「${name}」：${soon}。もんだいが ふえたら ちょうせんできるよ。いまは ${nowSubjects}の ぼうけんを すすめよう🌟`,

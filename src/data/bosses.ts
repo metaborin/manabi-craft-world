@@ -1,19 +1,22 @@
-import type { SaveData, Subject } from '../types/game'
-import { subjectQuestionCount } from './questions'
+import type { Grade, SaveData, Subject } from '../types/game'
+import { getQuestions, subjectQuestionCount } from './questions'
 import { SUBJECTS } from './grades'
 
 /**
  * エリアボス（5教科）。
  * 「敵を倒す」ではなく「まなびの力で 元気にする」存在。
  *
- * ■ 理科・社会・英語ボスを将来 有効化する手順（フェーズ3.6の土台）
+ * ■ 教科ボスを 有効化する手順
  *   1. src/data/questions.ts に その教科の問題を追加する
  *      （全学年合計 BOSS_RULES.enableQuestions 問以上）
  *   2. この配列の available を true にする
+ *   3. 特定の学年だけで出したいときは availableGrades にその学年を書く
+ *      （例: 理科は小3の問題だけあるので availableGrades: [3]）
  *   → これだけでワールドで挑戦できるようになり、
  *     図鑑・神殿の光・バッジ・称号も自動で連動する。
- *   問題数が足りないうちは available:true にしても有効化されない
- *   （isBossEnabled が両方を見るため、意図しない解放は起きない）。
+ *   問題数が足りない／対象学年でないうちは有効化されない
+ *   （isBossEnabled が available・学年・問題数をまとめて見るため、
+ *     意図しない解放は起きない）。
  */
 export interface BossDef {
   id: Subject
@@ -29,6 +32,12 @@ export interface BossDef {
   outro: string
   /** 明示的な有効化フラグ。問題がそろっても false のあいだは挑戦できない */
   available: boolean
+  /**
+   * 挑戦できる学年（省略すると どの学年でも可）。
+   * その教科の問題が特定の学年にしか無いときに使う。
+   * 例: 理科は小3の問題だけあるので [3]。
+   */
+  availableGrades?: Grade[]
   /** じゅんび中のあいだの表示（前向きな ことばで） */
   soonText: string
   /** 今後 追加予定の単元例（じゅんび中の表示に使う） */
@@ -108,7 +117,9 @@ export const BOSSES: BossDef[] = [
     desc: 'はな・むし・ほし・てんきの なぞを、まなびの 力で といていこう。',
     intro: 'ふしぎ ふしぎ…。しぜんの なぞが いっぱい なの。りかの 力で なぞを といて！',
     outro: 'なぞが とけて すっきり！ しぜんの 光を ありがとう！',
-    available: false,
+    available: true,
+    // 理科の問題は いまは小3ぶんだけ。小1・小2では じゅんび中のまま。
+    availableGrades: [3],
     soonText: 'あたらしい まなびを じゅんびちゅう',
     futureUnits: ['しょくぶつ', 'こんちゅう', 'たいよう と かげ', 'でんき', 'じしゃく'],
     pos: [4.5, 0, -19.5],
@@ -164,34 +175,47 @@ export const BOSS_MAP: Record<string, BossDef> = Object.fromEntries(
 )
 
 /**
- * いま挑戦できる教科か。
- * 明示的な有効化（available）と、その教科の問題数の両方をみたしたときだけ true。
- * 問題を追加しただけ・フラグを立てただけでは解放されない安全設計。
+ * その学年で いま挑戦できる教科か。
+ * 判定の順番：
+ *   1. 明示的な有効化（available）が true
+ *   2. 学年しばり（availableGrades があれば 今の学年が含まれるか）
+ *   3. 挑戦できる学年に、必要数以上の問題があるか
+ *      → 学年しばりボスは「その学年だけ」の問題数で数える（全学年合計は使わない）。
+ *        例: 理科は小3の27問で判定（全学年合計30ではない）。
+ *      → 学年しばりの無いボス（国語・算数）は、これまでどおり全学年合計で判定
+ *        （どの学年でも遊べる想定のため）。
+ * これにより「問題を追加しただけ」「フラグを立てただけ」では解放されない。
+ * また 小1・小2に理科問題が無いうちは、その学年では有効化されない。
  */
-export function isBossEnabled(b: BossDef): boolean {
-  return b.available && subjectQuestionCount(b.id) >= BOSS_RULES.enableQuestions
+export function isBossEnabled(b: BossDef, grade: Grade): boolean {
+  if (!b.available) return false
+  if (b.availableGrades) {
+    if (!b.availableGrades.includes(grade)) return false
+    // 学年しばりボスは その学年の問題数だけで判定する（全学年合計は使わない）
+    // 例: 理科は getQuestions(3, 'rika').length = 27 で判定
+    return getQuestions(grade, b.id).length >= BOSS_RULES.enableQuestions
+  }
+  // 学年しばりの無いボスは 従来どおり全学年合計で判定
+  return subjectQuestionCount(b.id) >= BOSS_RULES.enableQuestions
 }
 
-/** いま挑戦できるボス（問題データは静的なので起動時に1回だけ計算） */
-export const ACTIVE_BOSSES = BOSSES.filter(isBossEnabled)
+/** その学年で いま挑戦できるボスの一覧 */
+export function activeBosses(grade: Grade): BossDef[] {
+  return BOSSES.filter((b) => isBossEnabled(b, grade))
+}
 
-/** じゅんび中のボス（ワールドでは ねむった すがたで まっている） */
-export const SOON_BOSSES = BOSSES.filter((b) => !isBossEnabled(b))
-
-const ENABLED_IDS = new Set(ACTIVE_BOSSES.map((b) => b.id))
-
-/** ボスの状態。画面ごとに条件式を書かず、必ずこれで判定する */
+/** ボスの状態。画面ごとに条件式を書かず、必ずこれで判定する（学年は save から見る） */
 export type BossState = 'cleared' | 'available' | 'locked' | 'comingSoon'
 
 export function bossState(s: SaveData, b: BossDef): BossState {
   if (s.bossCleared.includes(b.id)) return 'cleared'
-  if (!ENABLED_IDS.has(b.id)) return 'comingSoon'
+  if (!isBossEnabled(b, s.grade)) return 'comingSoon'
   return b.isReady(s) ? 'available' : 'locked'
 }
 
-/** 「いまは こくごと さんすう」のような、いま遊べる教科の案内文 */
-export function activeSubjectsText(): string {
-  return ACTIVE_BOSSES.map((b) => SUBJECTS[b.id].name).join('と ')
+/** 「いまは こくごと さんすう」のような、その学年で いま遊べる教科の案内文 */
+export function activeSubjectsText(grade: Grade): string {
+  return activeBosses(grade).map((b) => SUBJECTS[b.id].name).join('と ')
 }
 
 /**

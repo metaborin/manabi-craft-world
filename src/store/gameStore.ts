@@ -13,7 +13,7 @@ import { getQuestions } from '../data/questions'
 import { SUBJECTS } from '../data/grades'
 import { BADGES, BLOCK_MAP, DAILY_BONUS, PET_MAP, petLevel, TITLES, xpForLevel } from '../data/rewards'
 import { checkAreaUnlocks, isAreaUnlocked, NPC_AREA, type AreaDef } from '../data/areas'
-import { activeSubjectsText, BOSS_MAP, BOSS_RULES, bossState, isTempleReady } from '../data/bosses'
+import { activeSubjectsText, BOSS_MAP, BOSS_RULES, bossState, isBossEnabled, isTempleReady } from '../data/bosses'
 import { missionsForDate, missionClaimed, missionDone } from '../data/missions'
 import { BUILD_TEMPLATES, templateCost, templateCell } from '../data/templates'
 import {
@@ -545,19 +545,27 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!save) return
     const def = BOSS_MAP[subject]
     if (!def) return
-    const state = bossState(save, def)
-    if (state === 'comingSoon') {
-      // じゅんび中のボス：問題画面には進まず、前向きな あんないだけ出す
+    // まず学年条件でチェックする。いまの学年で挑戦できないボスは、
+    // モーダルを開く前に ここで止めて、案内だけ出す（問題不足で止める形にしない）。
+    if (!isBossEnabled(def, save.grade)) {
       playSound('talk')
-      get().showToast(UI.boss.comingSoon(def.icon, def.name, def.soonText, activeSubjectsText()))
+      if (save.bossCleared.includes(subject) && def.availableGrades) {
+        // ほかの学年でクリア済み。クリア記録は保持したまま、この学年では あそべない。
+        const gradeLabel = def.availableGrades.map((g) => `${g}年生`).join('・')
+        get().showToast(UI.boss.clearedElsewhere(def.name, gradeLabel))
+      } else {
+        get().showToast(UI.boss.comingSoon(def.icon, def.name, def.soonText, activeSubjectsText(save.grade)))
+      }
       return
     }
+    // ここから先は、この学年で有効なボス（available / locked / cleared）
+    const state = bossState(save, def)
     if (state === 'locked') {
       const hint = def.remainingHint(save)
       get().showToast(`${UI.boss.notReady(def.name)} ${def.conditionText}${hint ? `（${hint}）` : ''}`)
       return
     }
-    // その学年・教科から5問えらぶ
+    // その学年・教科から5問えらぶ（念のための最終チェック）
     const pool = getQuestions(save.grade, subject)
     if (pool.length < BOSS_RULES.bossQuestions) {
       get().showToast(UI.boss.preparing)
@@ -677,19 +685,23 @@ export const useGameStore = create<GameState>((set, get) => ({
     // 3問せいかい → その場でクリア！
     if (boss.correct >= need) {
       const rewardText: string[] = []
-      let petLeveled = false
       const isTemple = boss.kind === 'temple'
       const first = boss.firstClear
-      mutateSave(get, set, (s) => {
-        const coins = isTemple ? (first ? 50 : 15) : first ? 30 : 10
-        const xp = isTemple ? (first ? 60 : 20) : first ? 40 : 15
-        s.coins += coins
-        rewardText.push(`🪙 +${coins}`)
-        addXp(s, xp)
-        rewardText.push(`✨ けいけんち +${xp}`)
-        petLeveled = addPetExpTo(s, first ? (isTemple ? 5 : 3) : 1)
-        if (s.pet) rewardText.push(`🐾 +${first ? (isTemple ? 5 : 3) : 1}`)
-        if (first) {
+      // 報酬は「はじめてクリア」したときだけ。
+      // 2回目からは 何度あそんでも コイン・経験値・ブロック・バッジ・称号・光は
+      // いっさい増えない（クリア済み表示と 効果音だけ）。
+      if (first) {
+        let petLeveled = false
+        mutateSave(get, set, (s) => {
+          const coins = isTemple ? 50 : 30
+          const xp = isTemple ? 60 : 40
+          s.coins += coins
+          rewardText.push(`🪙 +${coins}`)
+          addXp(s, xp)
+          rewardText.push(`✨ けいけんち +${xp}`)
+          const petExp = isTemple ? 5 : 3
+          petLeveled = addPetExpTo(s, petExp)
+          if (s.pet) rewardText.push(`🐾 +${petExp}`)
           const blocks: Record<string, number> = isTemple
             ? { gem: 2, gold: 2 }
             : boss.subject === 'kokugo'
@@ -706,12 +718,13 @@ export const useGameStore = create<GameState>((set, get) => ({
             s.bossCleared.push(boss.subject)
             rewardText.push(UI.boss.lightGet)
           }
-        }
-        checkBadges(s)
-      })
+          checkBadges(s)
+        })
+        if (petLeveled) setTimeout(() => notifyPetLevelUp(get), 2000)
+      }
+      // クリアの喜び（音・ペット）は 再クリアでも出す（報酬ではない）
       playSound('levelup')
       petCelebrate(3000)
-      if (petLeveled) setTimeout(() => notifyPetLevelUp(get), 2000)
       set({ boss: { ...get().boss!, phase: 'clear', rewardText } })
       return
     }

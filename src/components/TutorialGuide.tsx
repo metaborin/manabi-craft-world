@@ -3,7 +3,7 @@ import { GRADES, SUBJECTS } from '../data/grades'
 import { BADGES, petExpToNext, petLevel } from '../data/rewards'
 import { missionsForDate, missionClaimed, missionDone, missionProgress } from '../data/missions'
 import { UNLOCKABLE_AREAS } from '../data/areas'
-import { ACTIVE_BOSSES, isTempleReady } from '../data/bosses'
+import { activeBosses, isTempleReady } from '../data/bosses'
 import { TREASURE_COUNT } from '../data/world'
 import { todayString } from '../store/saveSystem'
 import { UI } from '../data/uiText'
@@ -52,7 +52,7 @@ export function TutorialGuide() {
   const nextArea = UNLOCKABLE_AREAS.find(
     (a) => a.id !== 'temple' && !save.unlockedAreas.includes(a.id),
   )
-  const readyBoss = ACTIVE_BOSSES.find(
+  const readyBoss = activeBosses(save.grade).find(
     (b) => !save.bossCleared.includes(b.id) && b.isReady(save),
   )
   const templeReady = isTempleReady(save) && !save.templeCleared

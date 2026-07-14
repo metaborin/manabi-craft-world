@@ -505,9 +505,11 @@ function BossFigure({
   const cleared = useGameStore(
     (s) => (npc.subject ? (s.save?.bossCleared.includes(npc.subject) ?? false) : false),
   )
-  // 有効化されているかは問題データで決まる静的な値（再計算しない）
+  // 有効化されているかは その学年で決まる（理科は小3だけ挑戦可能）
   const def = npc.subject ? BOSS_MAP[npc.subject] : undefined
-  const sleeping = useMemo(() => (def ? !isBossEnabled(def) : false), [def])
+  const grade = useGameStore((s) => s.save?.grade ?? 1)
+  const sleeping = useMemo(() => (def ? !isBossEnabled(def, grade) : false), [def, grade])
+  const visuallyCleared = cleared && !sleeping
   const quality = useGameStore((s) => getQuality(s.settings))
   const lightColor = useMemo(
     () => '#' + new THREE.Color(npc.color).lerp(new THREE.Color('#ffffff'), 0.45).getHexString(),
@@ -517,13 +519,13 @@ function BossFigure({
   useFrame(({ clock }) => {
     if (!group.current) return
     // ふわふわ うかぶ（クリア後は うれしそうに はやめ・ねむり中は ゆっくり）
-    const speed = cleared ? 2.6 : sleeping ? 0.8 : 1.4
+    const speed = visuallyCleared ? 2.6 : sleeping ? 0.8 : 1.4
     group.current.position.y = 0.9 + Math.sin(clock.elapsedTime * speed) * (sleeping ? 0.08 : 0.18)
     group.current.rotation.y = sleeping ? 0 : Math.sin(clock.elapsedTime * 0.6) * 0.25
   })
 
-  const bodyOpacity = cleared ? 0.95 : sleeping ? 0.45 : 0.7
-  const partOpacity = cleared ? 0.9 : sleeping ? 0.35 : 0.55
+  const bodyOpacity = visuallyCleared ? 0.95 : sleeping ? 0.45 : 0.7
+  const partOpacity = visuallyCleared ? 0.9 : sleeping ? 0.35 : 0.55
 
   return (
     <group position={npc.pos}>
@@ -532,7 +534,7 @@ function BossFigure({
         <mesh>
           <boxGeometry args={[1.3, 1.1, 1.2]} />
           <meshLambertMaterial
-            color={cleared ? lightColor : npc.color}
+            color={visuallyCleared ? lightColor : npc.color}
             transparent
             opacity={bodyOpacity}
           />
@@ -547,17 +549,17 @@ function BossFigure({
         </mesh>
         {/* め（クリアで にっこり・ねむり中は とじている） */}
         <mesh position={[-0.22, 0.12, 0.62]}>
-          <boxGeometry args={[0.14, cleared || sleeping ? 0.06 : 0.18, 0.02]} />
+          <boxGeometry args={[0.14, visuallyCleared || sleeping ? 0.06 : 0.18, 0.02]} />
           <meshBasicMaterial color="#3a3a3a" />
         </mesh>
         <mesh position={[0.22, 0.12, 0.62]}>
-          <boxGeometry args={[0.14, cleared || sleeping ? 0.06 : 0.18, 0.02]} />
+          <boxGeometry args={[0.14, visuallyCleared || sleeping ? 0.06 : 0.18, 0.02]} />
           <meshBasicMaterial color="#3a3a3a" />
         </mesh>
       </group>
       {showLabel && (
         <TextSprite
-          text={cleared ? `⭐ ${npc.label}` : sleeping ? `💤 ${npc.label}` : npc.label}
+          text={visuallyCleared ? `⭐ ${npc.label}` : sleeping ? `💤 ${npc.label}` : npc.label}
           position={[0, 2.6, 0]}
           scale={1.05}
           bg={isNear ? 'rgba(255,249,224,0.97)' : 'rgba(255,255,255,0.9)'}

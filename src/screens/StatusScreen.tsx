@@ -137,7 +137,7 @@ export function StatusScreen() {
               💡 まなびの光 {save.bossCleared.length}／{BOSSES.length}
             </span>
           </div>
-          <div className="status-sub">{UI.temple.lightsNote(activeSubjectsText())}</div>
+          <div className="status-sub">{UI.temple.lightsNote(activeSubjectsText(save.grade))}</div>
           <div className="bottom-row">
             <button className="btn btn-primary" onClick={() => setScreen('mission')}>
               {UI.mission.open} をみる ▶
