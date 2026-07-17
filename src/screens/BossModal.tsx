@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { BOSSES, BOSS_MAP, BOSS_RULES, isBossEnabled } from '../data/bosses'
 import { SUBJECTS } from '../data/grades'
 import { UI } from '../data/uiText'
 import { Furigana } from '../components/Furigana'
+import { shuffleChoices } from '../game/choices'
 import type { Grade } from '../types/game'
 
 /** しんでんイントロに出す「5教科の光」の一覧 */
@@ -42,6 +44,14 @@ export function BossModal() {
   const closeBoss = useGameStore((s) => s.closeBoss)
   const bossCleared = useGameStore((s) => s.save?.bossCleared)
   const grade = useGameStore((s) => s.save?.grade ?? 1)
+  // 選択肢の ならびは「問題が かわったときだけ」きめる。
+  // questions は チャレンジごとに 新しい配列、index は 問題ごとに かわるので、
+  // ・同じ問題のあいだ（とうじょう→出題、○×、かいせつ、ヒント）は 動かない
+  // ・つぎの問題／もう一度 ちょうせん では ならびかえ直す
+  const choices = useMemo(
+    () => (boss ? shuffleChoices(boss.questions[boss.index]) : []),
+    [boss?.questions, boss?.index],
+  )
   if (!boss) return null
 
   const isTemple = boss.kind === 'temple'
@@ -189,9 +199,13 @@ export function BossModal() {
                 </div>
               )}
               <div className="choice-list">
-                {q.choices.map((c, i) => (
-                  <button key={i} className="choice-btn" onClick={() => bossAnswer(i)}>
-                    <Furigana text={c} />
+                {choices.map((c) => (
+                  <button
+                    key={c.originalIndex}
+                    className="choice-btn"
+                    onClick={() => bossAnswer(c.originalIndex)}
+                  >
+                    <Furigana text={c.text} />
                   </button>
                 ))}
               </div>

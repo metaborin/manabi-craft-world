@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { SUBJECTS } from '../data/grades'
 import { BLOCK_MAP } from '../data/rewards'
 import { UI } from '../data/uiText'
 import { Furigana } from '../components/Furigana'
+import { shuffleChoices } from '../game/choices'
 import { countRender } from '../game/perf'
 
 /** クエスト完了画面のかるい紙ふぶき（CSSアニメーション） */
@@ -31,6 +33,14 @@ export function QuestModal() {
   const showHint = useGameStore((s) => s.showHint)
   const questNext = useGameStore((s) => s.questNext)
   const closeQuest = useGameStore((s) => s.closeQuest)
+  // 選択肢の ならびは「問題が かわったときだけ」きめる。
+  // questions は クエストごとに 新しい配列、index は 問題ごとに かわるので、
+  // ・同じ問題を出しているあいだ（○×・かいせつ・ヒント・ふりがな切りかえ）は 動かない
+  // ・つぎの問題／もういちど あそぶ では ならびかえ直す
+  const choices = useMemo(
+    () => (quest ? shuffleChoices(quest.questions[quest.index]) : []),
+    [quest?.questions, quest?.index],
+  )
   if (!quest) return null
 
   const subject = SUBJECTS[quest.subject]
@@ -164,13 +174,13 @@ export function QuestModal() {
           {quest.assist && <div className="assist-banner">{UI.quest.assistBanner}</div>}
 
           <div className="choice-list">
-            {q.choices.map((c, i) => (
+            {choices.map((c) => (
               <button
-                key={i}
-                className={`choice-btn ${quest.assist && i === q.answer ? 'assist-glow' : ''}`}
-                onClick={() => answerQuestion(i)}
+                key={c.originalIndex}
+                className={`choice-btn ${quest.assist && c.originalIndex === q.answer ? 'assist-glow' : ''}`}
+                onClick={() => answerQuestion(c.originalIndex)}
               >
-                <Furigana text={c} />
+                <Furigana text={c.text} />
               </button>
             ))}
           </div>
