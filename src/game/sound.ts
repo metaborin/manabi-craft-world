@@ -92,8 +92,19 @@ function tone(
 }
 
 /** 効果音を鳴らす。オフのときや失敗時は静かに何もしない */
+/**
+ * おなじ音が すごく短いあいだに かさなって 鳴るのを ふせぐ。
+ * （ボタンの二重発火などで 音が にごるのを 止める。
+ *   ちがう音や、少し時間があいた音は そのまま 鳴る）
+ */
+const SAME_SOUND_GAP_MS = 60
+const lastPlayedAt: Partial<Record<SoundName, number>> = {}
+
 export function playSound(name: SoundName): void {
   if (!soundState.enabled) return
+  const now = Date.now()
+  if (now - (lastPlayedAt[name] ?? 0) < SAME_SOUND_GAP_MS) return
+  lastPlayedAt[name] = now
   try {
     const c = getCtx()
     if (!c) return

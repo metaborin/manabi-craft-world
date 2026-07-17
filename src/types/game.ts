@@ -145,8 +145,16 @@ export interface SaveData {
   tutorialStep: number
   /** チュートリアルが終わったか */
   tutorialDone: boolean
-  /** 開けた たからばこ のID（一度きりの宝箱） */
+  /**
+   * 見つけた たからばこ のID（はじめて あけた記録）。
+   * バッジ・称号・図鑑のかぞえ に使うので、一度入ったら 消さない。
+   */
   openedChests: string[]
+  /**
+   * 通常のフィールド宝箱を つぎに あけられる時刻（ミリ秒・Date.now()）。
+   * 宝箱ID → 時刻。古いセーブには無いので optional（読み込み時に {} を入れる）。
+   */
+  chestCooldowns?: Record<string, number>
   /** 話しかけたことのあるNPCのID（図鑑用） */
   metNPCs: string[]
   /** きょうのミッションの進行状況（日付が変わるとリセット） */
@@ -202,6 +210,8 @@ export interface Settings {
   sound: 'on' | 'off'
   /** ふりがな表示 */
   furigana: 'on' | 'off'
+  /** ゲーム内メッセージ（画面すみに出る おしらせ）の表示 */
+  messages: 'on' | 'off'
   /** けいりょうモード（演出や装飾をへらして軽くする） */
   liteMode: 'on' | 'off'
   /**

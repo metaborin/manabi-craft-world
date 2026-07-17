@@ -58,6 +58,10 @@ export const UI = {
     chestClosed: 'まいにちボックスは あした また あくよ🔒',
     treasureOpened: 'たからばこを みつけた！',
     treasureAlready: 'この たからばこは もう あけたよ✨',
+    /** 再使用まちの宝箱に しらべる をしたとき */
+    treasureWaiting: (remain: string) => `この たからばこは あと ${remain}で また あけられるよ⏳`,
+    /** 2回目からの宝箱を あけたとき */
+    treasureAgain: (coins: number) => `また あけられた！ 🪙${coins}まい ゲット！✨`,
     noQuestions: (subject: string, grade: number) =>
       `${subject}の もんだいは ${grade}ねんせいでは じゅんびちゅう！ ほかの がくねんで あそんでみてね`,
   },
@@ -256,6 +260,9 @@ export const UI = {
     furigana: 'ふりがな',
     furiganaOn: 'つける',
     furiganaOff: 'つけない',
+    messages: 'ゲーム内メッセージ（画面すみの おしらせ）',
+    messagesOn: 'ひょうじする',
+    messagesOff: 'ひょうじしない',
     liteMode: 'けいりょうモード（PCで うごきが おもいときは オンにしてね）',
     liteOn: 'オン',
     liteOff: 'オフ',

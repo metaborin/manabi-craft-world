@@ -562,26 +562,90 @@ ruby rt {
 }
 
 /* トースト */
+/* おしらせ（トースト）
+   ゲームの まんなかや、上のHUD・下の そうさボタンに かぶらない
+   すみに 小さく出す。はばによって 出す場所を かえる。
+   ・はば900px以上：HUDボタンが1行なので すぐ下（右上）
+   ・はば561〜899px：HUDボタンが2行に おりかえすので もう少し下
+   ・はば560px以下：下の そうさボタンの すぐ上（下の @media）
+   （かさなり具合は 実際にはかって きめている） */
 .toast {
   position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: calc(150px + env(safe-area-inset-top, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  left: auto;
+  bottom: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: min(340px, 42vw);
   background: rgba(74, 55, 40, 0.92);
   color: #fff;
-  border-radius: 16px;
-  padding: 14px 22px;
-  font-size: 17px;
-  max-width: min(560px, 90vw);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
   box-shadow: var(--shadow);
   z-index: 200;
-  animation: pop-up 0.3s;
+  /* おしらせが 下のゲーム操作を じゃましないように（✕だけ おせる） */
+  pointer-events: none;
+  animation: toast-in 0.25s ease-out;
 }
-@keyframes pop-up {
+.toast-text {
+  flex: 1;
+  min-width: 0;
+}
+/* ✕ボタン：見た目は小さく、タップ領域は 44px かくほ */
+.toast-close {
+  pointer-events: auto;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  /* まわりの よはくを つめて、見た目を コンパクトに保つ */
+  margin: -11px -8px -11px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  opacity: 0.75;
+  cursor: pointer;
+}
+.toast-close:hover,
+.toast-close:focus-visible {
+  opacity: 1;
+}
+.toast-leaving {
+  animation: toast-out 0.4s ease-in forwards;
+}
+@keyframes toast-in {
   from {
-    transform: translateX(-50%) translateY(20px);
+    transform: translateY(-6px);
     opacity: 0;
   }
+}
+@keyframes toast-out {
+  to {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+}
+/* ひろい画面では HUDボタンが 1行に おさまるので、もう少し上に出せる */
+@media (min-width: 900px) {
+  .toast {
+    top: calc(62px + env(safe-area-inset-top, 0px));
+  }
+}
+/* けいりょうモードでは アニメーションを へらす */
+.lite .toast {
+  animation: none;
+}
+.lite .toast-leaving {
+  animation: none;
+  opacity: 0;
 }
 
 /* ============ クエスト ============ */
@@ -1224,7 +1288,7 @@ ruby rt {
   font-size: 17px;
 }
 .text-large .toast {
-  font-size: 20px;
+  font-size: 17px;
 }
 .text-large .slot-detail,
 .text-large .slot-date {
@@ -2469,6 +2533,20 @@ ruby rt {
 @media (max-width: 560px) {
   .hud-help {
     display: none;
+  }
+  /* せまい画面では 上のHUDボタンが おりかえして 右上をふさぐので、
+     おしらせは 下の そうさボタンの すぐ上に出す（safe-areaも考える）。
+     左右いっぱいに広げて、長文が たてに のびすぎないようにする。 */
+  .toast {
+    top: auto;
+    bottom: calc(168px + env(safe-area-inset-bottom, 0px));
+    left: calc(10px + env(safe-area-inset-left, 0px));
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    max-width: none;
+    font-size: 14px;
+  }
+  .text-large .toast {
+    font-size: 16px;
   }
   .hud-guide {
     top: 74px;

@@ -1,8 +1,15 @@
-import { memo, useEffect, useMemo, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGameStore } from '../store/gameStore'
-import { WORLD_HALF, WORLD_NPCS, BUILD_GRID_SIZE, BUILD_ORIGIN, TREE_POSITIONS } from '../data/world'
+import {
+  WORLD_HALF,
+  WORLD_NPCS,
+  BUILD_GRID_SIZE,
+  BUILD_ORIGIN,
+  TREE_POSITIONS,
+  chestRemainingMs,
+} from '../data/world'
 import { BLOCK_MAP } from '../data/rewards'
 import { GRADES } from '../data/grades'
 import { UNLOCKABLE_AREAS, NPC_AREA } from '../data/areas'
@@ -431,18 +438,33 @@ function ChestFigure({ npc, isNear }: { npc: WorldNPC; isNear: boolean }) {
   const isTreasure = npc.kind === 'treasure'
   const quality = useGameStore((s) => getQuality(s.settings))
   const showLabel = quality === 'normal' || (quality === 'lite' && isNear)
-  const opened = useGameStore((s) => {
-    if (!s.save) return false
-    return isTreasure
-      ? s.save.openedChests.includes(npc.id)
-      : s.save.chestDate === todayString()
-  })
+  // 数値だけを購読するので、セーブの作りなおしでは 再描画されない
+  const cooldownUntil = useGameStore((s) =>
+    isTreasure ? (s.save?.chestCooldowns?.[npc.id] ?? 0) : 0,
+  )
+  const dailyOpened = useGameStore((s) =>
+    isTreasure ? false : s.save?.chestDate === todayString(),
+  )
+  // まちの時間が おわったら 自動で とじた見た目に もどすための 時計。
+  // まちのあいだだけ 1びょうごとに すすめる（毎フレームは 数えない）
+  const [now, setNow] = useState(() => Date.now())
+  const tick = useRef(0)
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     if (sparkle.current) {
       sparkle.current.position.y = 1.35 + Math.sin(clock.elapsedTime * 3) * 0.15
     }
+    if (cooldownUntil > now) {
+      tick.current += delta
+      if (tick.current >= 1) {
+        tick.current = 0
+        setNow(Date.now())
+      }
+    }
   })
+
+  // たからばこ：まち時間の あいだだけ「あいた見た目」。おわると とじて また ✨が出る
+  const opened = isTreasure ? chestRemainingMs(cooldownUntil, now) > 0 : dailyOpened
 
   const bodyColor = opened ? '#8a6a4a' : isTreasure ? '#a8442f' : '#b5813a'
   const lidColor = opened ? '#75593d' : isTreasure ? '#c0392b' : '#e8b93e'

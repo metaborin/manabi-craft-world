@@ -229,6 +229,57 @@ export const TREASURE_REWARDS: Record<string, TreasureReward> = {
 /** たからばこの総数（図鑑・ステータス表示用） */
 export const TREASURE_COUNT = Object.keys(TREASURE_REWARDS).length
 
+// ============================================================
+// 宝箱の くりかえし利用（フェーズ3.8C）
+// ============================================================
+
+/**
+ * 時間がたつと もう一度 あけられる「通常のフィールド宝箱」のID。
+ *
+ * ここに入れた宝箱だけが くりかえし あけられる。
+ * ボスの初回ほうしゅう・チュートリアルのごほうび・
+ * 一度きりに いみがある 特別な宝箱は、ここに入れないこと。
+ * （はじめて あけた記録＝openedChests は消えないので、
+ *   バッジ・称号・図鑑のかぞえ は 1回目のままで ふえない）
+ */
+export const REPEATABLE_CHESTS: ReadonlySet<string> = new Set([
+  'treasure-forest',
+  'treasure-hill',
+  'treasure-port',
+  'treasure-flower',
+  'treasure-pond',
+])
+
+/** もう一度 あけられるように なるまでの 時間（10分） */
+export const CHEST_COOLDOWN_MS = 10 * 60 * 1000
+
+/** 2回目からの ごほうび。初回より ひかえめ（ブロック・バッジは 出ない） */
+export const CHEST_REPEAT_COINS = 3
+
+/**
+ * その宝箱が あと何ミリ秒で あけられるか（0なら いま あけられる）。
+ *
+ * 端末の時計が ずれても こわれないように、次を 0 として あつかう。
+ * ・記録が無い／数でない（NaN・Infinity）
+ * ・すでに 時間が すぎている
+ * ・のこり時間が クールダウンより長い（＝時計が もどされた とみなす）
+ */
+export function chestRemainingMs(until: number | undefined, now: number): number {
+  if (typeof until !== 'number' || !Number.isFinite(until)) return 0
+  const left = until - now
+  if (left <= 0) return 0
+  if (left > CHEST_COOLDOWN_MS) return 0
+  return left
+}
+
+/** のこり時間を「9分30秒」の形にする（マイナスや NaN は 0びょう になる） */
+export function formatRemain(ms: number): string {
+  const total = Math.max(0, Math.ceil((Number.isFinite(ms) ? ms : 0) / 1000))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return m > 0 ? `${m}分${s}秒` : `${s}秒`
+}
+
 /** 図鑑に載せるキャラクターNPC（quest/shop/build/guide） */
 export const CHARACTER_NPCS = WORLD_NPCS.filter(
   (n) => n.kind === 'quest' || n.kind === 'shop' || n.kind === 'build' || n.kind === 'guide',

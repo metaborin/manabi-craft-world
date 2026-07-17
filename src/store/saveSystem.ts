@@ -35,6 +35,7 @@ export function createNewSave(name: string, avatar: number): SaveData {
     tutorialStep: 0,
     tutorialDone: false,
     openedChests: [],
+    chestCooldowns: {},
     metNPCs: [],
     daily: { date: todayString(), counters: {}, claimed: [], bonusClaimed: false },
     totalMissionsCompleted: 0,
@@ -73,6 +74,8 @@ export function loadSave(slot: SlotId): SaveData | null {
     // フェーズ2.5で追加された項目を補完する
     data.openedChests ??= []
     data.metNPCs ??= []
+    // フェーズ3.8C：宝箱の再開封まちの時刻。古いセーブは からっぽ＝すぐ あけられる
+    data.chestCooldowns ??= {}
     // フェーズ2.7：ミッション関連を補完。日付が変わっていたらリセット
     data.daily ??= { date: todayString(), counters: {}, claimed: [], bonusClaimed: false }
     if (data.daily.date !== todayString()) {

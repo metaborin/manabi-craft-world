@@ -21,7 +21,12 @@ import {
   BUILD_GRID_SIZE,
   BUILD_MAX_LAYERS,
   BUILD_ORIGIN,
+  CHEST_COOLDOWN_MS,
+  CHEST_REPEAT_COINS,
+  REPEATABLE_CHESTS,
   TREASURE_REWARDS,
+  chestRemainingMs,
+  formatRemain,
 } from '../data/world'
 import { UI } from '../data/uiText'
 import { petCelebrate, playFx, registerFxSink, type FxType } from '../game/effects'
@@ -181,6 +186,11 @@ interface GameState {
 }
 
 let toastId = 0
+
+/** 同じ内容の おしらせを まとめる時間（ミリ秒） */
+const TOAST_DEDUPE_MS = 1500
+let lastToastText = ''
+let lastToastAt = 0
 
 /** 1次元配列が同じ内容か */
 function sameArray<T>(a: readonly T[], b: readonly T[]): boolean {
@@ -494,9 +504,32 @@ export const useGameStore = create<GameState>((set, get) => ({
         break
       }
       case 'treasure': {
-        // たんけんの たからばこ（1回だけ）
-        if (save.openedChests.includes(nearby.id)) {
+        // たんけんの たからばこ
+        // ・はじめて：これまでどおりの ごほうび＋バッジ＋図鑑の記録
+        // ・2回目から：時間をあけて、ひかえめな ごほうび（バッジ・ブロックは 出ない）
+        const firstTime = !save.openedChests.includes(nearby.id)
+        const repeatable = REPEATABLE_CHESTS.has(nearby.id)
+        if (!firstTime && !repeatable) {
+          // 一度きりの 特別な宝箱は これまでどおり
           get().showToast(UI.world.treasureAlready)
+          break
+        }
+        if (!firstTime) {
+          // くりかえし あけられる宝箱：まだ 時間が のこっていたら 待ってもらう
+          const remain = chestRemainingMs(save.chestCooldowns?.[nearby.id], Date.now())
+          if (remain > 0) {
+            playSound('talk')
+            get().showToast(UI.world.treasureWaiting(formatRemain(remain)))
+            break
+          }
+          // 2回目からの ごほうび（コインだけ・少なめ）
+          mutateSave(get, set, (s) => {
+            s.coins += CHEST_REPEAT_COINS
+            s.chestCooldowns = { ...(s.chestCooldowns ?? {}), [nearby.id]: Date.now() + CHEST_COOLDOWN_MS }
+          })
+          playFx('chest', `+${CHEST_REPEAT_COINS} 🪙`)
+          petCelebrate(1200)
+          get().showToast(UI.world.treasureAgain(CHEST_REPEAT_COINS))
           break
         }
         const reward = TREASURE_REWARDS[nearby.id]
@@ -505,6 +538,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         let newBadges: string[] = []
         mutateSave(get, set, (s) => {
           s.openedChests.push(nearby.id)
+          if (repeatable) {
+            s.chestCooldowns = { ...(s.chestCooldowns ?? {}), [nearby.id]: Date.now() + CHEST_COOLDOWN_MS }
+          }
           if (reward.coins) {
             s.coins += reward.coins
             parts.push(`🪙${reward.coins}まい`)
@@ -1194,6 +1230,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   showToast: (text) => {
+    // 同じ おしらせが 短いあいだに 何度も出るのを ふせぐ
+    // （ちがう おしらせは そのまま 出す）
+    const now = Date.now()
+    if (text === lastToastText && now - lastToastAt < TOAST_DEDUPE_MS) return
+    lastToastText = text
+    lastToastAt = now
     set({ toast: { id: ++toastId, text } })
   },
 

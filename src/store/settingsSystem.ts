@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS: Settings = {
   touchButtons: 'auto',
   sound: 'on',
   furigana: 'on',
+  messages: 'on',
   liteMode: 'off',
 }
 

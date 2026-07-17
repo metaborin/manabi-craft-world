@@ -83,6 +83,14 @@ export function SettingsScreen() {
             ]}
           />
           <SettingRow
+            label={UI.settings.messages}
+            settingKey="messages"
+            options={[
+              { value: 'on', label: UI.settings.messagesOn },
+              { value: 'off', label: UI.settings.messagesOff },
+            ]}
+          />
+          <SettingRow
             label={UI.settings.liteMode}
             settingKey="liteMode"
             options={[
