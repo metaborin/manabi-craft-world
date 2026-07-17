@@ -108,7 +108,9 @@ export const BOSSES: BossDef[] = [
       return null
     },
   },
-  // ---- ここから下は じゅんび中のボス（問題がそろったら available:true にする） ----
+  // ---- ここから下は 学年しばりのあるボス・じゅんび中のボス ----
+  //   理科・社会：小3の問題だけそろっているので availableGrades: [3]
+  //   英語：まだ問題が少ないので available:false（じゅんび中）
   {
     id: 'rika',
     name: 'しぜんの なぞ',
@@ -138,7 +140,9 @@ export const BOSSES: BossDef[] = [
     desc: 'まち・おみせ・ちずの ことを まなんで、みちを ひらこう。',
     intro: 'あれれ…。みちが わからなく なっちゃった…。まちの ことを おしえて、みちを ひらいて！',
     outro: 'みちが ひらけた！ まちの 光を ありがとう！',
-    available: false,
+    available: true,
+    // 社会の問題は いまは小3ぶんだけ。小1・小2では じゅんび中のまま。
+    availableGrades: [3],
     soonText: 'もうすぐ ひらくよ',
     futureUnits: ['まちたんけん', 'おみせの しごと', 'ちず', 'こうつう', 'あんぜん'],
     pos: [20, 0, 5],
